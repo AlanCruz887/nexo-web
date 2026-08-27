@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Home, LogOut, Menu, Settings, WalletCards } from "lucide-react";
+import { Eye, EyeOff, Home, Landmark, LogOut, Menu, ReceiptText, Settings, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -10,6 +10,8 @@ import { reportError } from "@/lib/errors";
 
 const navigation = [
   { href: "/inicio", label: "Inicio", icon: Home },
+  { href: "/cuentas", label: "Cuentas", icon: Landmark },
+  { href: "/movimientos", label: "Movimientos", icon: ReceiptText },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 
@@ -52,10 +54,10 @@ export function AppShell() {
         </nav>
         <div className="mt-auto rounded-2xl bg-muted p-4">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <WalletCards aria-hidden="true" className="size-4 text-primary" />
-            Fundamento activo
+            <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
+            Datos protegidos
           </div>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Las funciones financieras llegarán por fases.</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Tus cuentas están aisladas mediante políticas de base de datos.</p>
         </div>
       </aside>
 
@@ -109,13 +111,13 @@ export function AppShell() {
         </main>
       </div>
 
-      <nav aria-label="Navegación inferior" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 border-t border-border bg-surface/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl lg:hidden">
+      <nav aria-label="Navegación inferior" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-surface/95 px-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl lg:hidden">
         {navigation.map(({ href, icon: Icon, label }) => (
           <NavLink
             key={href}
             className={({ isActive }) =>
               cn(
-                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-xs font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-xs",
                 isActive && "text-primary",
               )
             }

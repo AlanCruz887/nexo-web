@@ -4,7 +4,7 @@
 
 Cada fase termina con software verificable y documentación actualizada. No se inicia la siguiente si fallan invariantes financieras, aislamiento RLS o reconstrucción de saldos. Las fases agregan capacidades sobre el mismo núcleo; no crean modelos paralelos para cuentas, tarjetas, personas o reportes.
 
-Estado actual: **Fase 1 completada y verificada. Fase 2 no iniciada y requiere autorización explícita.**
+Estado actual: **Fase 2 completada y verificada. Fase 3 no iniciada y requiere autorización explícita.**
 
 ## 2. Secuencia recomendada
 
@@ -50,7 +50,34 @@ Verificación:
 
 Resultado verificado: typecheck, lint, 19 pruebas frontend, build y reconstrucción limpia en PostgreSQL con pruebas RLS A/B. No incluye cuentas, tarjetas, transacciones, terceros, MSI, presupuestos ni importación.
 
-### Fase 2 — Personas, compras compartidas y receivables
+### Fase 2 — Cuentas, movimientos base y transferencias — Completada
+
+Objetivo cumplido: introducir activos líquidos y actividad base sobre el núcleo de eventos sin adelantar tarjetas, personas u obligaciones futuras.
+
+Alcance implementado:
+
+- cuentas `checking`, `savings`, `cash`, `debit`, `investment` y `other`, con moneda y archivado;
+- categorías mínimas de sistema;
+- eventos financieros y entradas de cuenta inmutables;
+- saldo derivado desde entradas, sin `current_balance` editable;
+- ingresos, gastos simples con `personal_amount_minor = amount_minor` y ajustes preparados internamente;
+- transferencias atómicas entre cuentas de la misma moneda;
+- edición por reversión más reemplazo y eliminación/reversión compensatoria;
+- idempotencia transaccional, auditoría y notas versionadas;
+- RLS A/B, vistas `security_invoker` y queries sin N+1;
+- rutas `/cuentas`, `/cuentas/:id` y `/movimientos` con UI premium responsive.
+
+Verificación cumplida:
+
+- opening 10,000 + ingreso 5,000 - gasto 2,000 - transferencia 1,000 = 12,000 en origen y +1,000 en destino;
+- la transferencia no altera ingreso ni gasto;
+- retry devuelve el mismo resultado y payload distinto falla;
+- reversión restaura ambas cuentas;
+- usuario A no lee ni opera recursos del usuario B;
+- una cuenta archivada sale de selectores y conserva historial;
+- frontend, migraciones limpias y suite RLS/PostgreSQL pasan.
+
+### Fase 3 — Personas, compras compartidas y receivables
 
 Objetivo: implementar la diferenciación que define a Nexo.
 
@@ -72,7 +99,7 @@ Verificación:
 - pago parcial conserva pendiente y sobrepago conserva `credit_balance` sin crear ingreso;
 - entidades archivadas conservan historial y salen de selectores.
 
-### Fase 3 — Tarjetas, baseline, ciclos y statements
+### Fase 4 — Tarjetas, baseline, ciclos y statements
 
 Objetivo: modelar correctamente crédito y cortes sin confundirlos con cuentas.
 
@@ -103,7 +130,7 @@ Verificación:
 - pago histórico no-impacting no altera saldo;
 - cierre concurrente de un ciclo ocurre una sola vez.
 
-### Fase 4 — MSI nuevos e históricos
+### Fase 5 — MSI nuevos e históricos
 
 Objetivo: agregar planes sin duplicar deuda o gasto.
 
@@ -127,7 +154,7 @@ Verificación:
 - plan no incluido agrega solo principal pendiente;
 - una cuota anterior importada no crea flujo bancario ficticio.
 
-### Fase 5 — Presupuestos, recurrencias y suscripciones
+### Fase 6 — Presupuestos, recurrencias y suscripciones
 
 Objetivo: convertir datos confiables en control del gasto y automatización predecible.
 
@@ -146,7 +173,7 @@ Verificación:
 - desactivar una regla no borra historial;
 - preview y aplicación producen el mismo resultado validado.
 
-### Fase 6 — Conciliación e importaciones
+### Fase 7 — Conciliación e importaciones
 
 Objetivo: incorporar datos externos sin ocultar diferencias ni contaminar el núcleo.
 
@@ -166,7 +193,7 @@ Verificación:
 - saldo comparable y fecha/alcance coinciden;
 - Storage bloquea acceso cruzado.
 
-### Fase 7 — Planificación, forecast, patrimonio y salud
+### Fase 8 — Planificación, forecast, patrimonio y salud
 
 Objetivo: proyectar el futuro y evaluar posición personal a partir de hechos verificados.
 
@@ -185,7 +212,7 @@ Verificación:
 - compra de tercero no aumenta gasto personal;
 - cada indicador muestra componentes, periodo y política.
 
-### Fase 8 — Reportes, exportación y estados compartibles
+### Fase 9 — Reportes, exportación y estados compartibles
 
 Objetivo: presentar y compartir información sin crear una segunda fuente de cálculo.
 
@@ -204,7 +231,7 @@ Verificación:
 - modo privacidad cubre previews;
 - redondeos y totales son consistentes entre formatos.
 
-### Fase 9 — PWA avanzada, hardening y lanzamiento
+### Fase 10 — PWA avanzada, hardening y lanzamiento
 
 Objetivo: llevar el producto a calidad operativa sin relajar seguridad financiera.
 
@@ -296,11 +323,11 @@ No se agregan optimizaciones, tablas resumen o Edge Functions hasta demostrar su
 
 No bloquean la base de Fase 1, pero deben resolverse antes de su módulo:
 
-- Fase 3: saldo a favor de tarjeta/sobrepago del pasivo y flujo exacto de corrección post-cierre.
-- Fase 3: excepciones de emisores para fines de semana/festivos; por defecto se usan días calendario.
-- Fase 6: formatos bancarios prioritarios, fingerprints y autorización de `posted_date` por proveedor.
-- Fase 7: fórmula versionada de salud y política de valuación de inversiones; receivables ya quedan nominales.
-- Fase 8/9: proveedor y política de FX futuro, retención de auditoría, alcance offline, cifrado local y objetivos de rendimiento.
+- Fase 4: saldo a favor de tarjeta/sobrepago del pasivo y flujo exacto de corrección post-cierre.
+- Fase 4: excepciones de emisores para fines de semana/festivos; por defecto se usan días calendario.
+- Fase 7: formatos bancarios prioritarios, fingerprints y autorización de `posted_date` por proveedor.
+- Fase 8: fórmula versionada de salud y política de valuación de inversiones; receivables ya quedan nominales.
+- Fase 9/10: proveedor y política de FX futuro, retención de auditoría, alcance offline, cifrado local y objetivos de rendimiento.
 
 ## 8. Suite permanente de invariantes
 
@@ -329,6 +356,6 @@ Estas pruebas se agregan en la primera fase donde exista la entidad necesaria y 
 21. el invariante `purchase_amount = personal_amount + third_party_allocations` se exige en compras y no se aplica indebidamente a otros tipos de evento;
 22. una compra MSI nueva impacta el principal de tarjeta una sola vez y sus cuotas no vuelven a sumar el mismo principal.
 
-## 9. Condición para iniciar Fase 1
+## 9. Condición para iniciar Fase 3
 
-La Fase 1 empieza únicamente después de que el usuario revise este paquete documental y autorice expresamente su implementación. Hasta entonces no se crean tablas productivas ni funcionalidad de negocio.
+La Fase 3 empieza únicamente después de autorización expresa. Hasta entonces no se crean personas, receivables, compras compartidas ni modelos parciales de fases posteriores.

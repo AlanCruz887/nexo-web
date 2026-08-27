@@ -50,18 +50,18 @@ Los nombres son una propuesta para las migraciones futuras; esta fase no crea es
 |---|---|---|
 | `profiles` | Preferencias del propietario | `user_id`, locale, timezone, `base_currency` |
 | `user_preferences` | UI y privacidad | theme, hide_amounts, motion preference |
-| `idempotency_keys` | Evitar comandos duplicados | `user_id`, key, command_type, request_hash, result_id, status |
+| `financial_commands` | Evitar comandos duplicados | `user_id`, `idempotency_key`, command_type, payload canónico, result_id |
 
 ### 3.2 Catálogo financiero
 
 | Entidad | Responsabilidad | Campos conceptuales clave |
 |---|---|---|
 | `currencies` | Escala monetaria conocida | ISO code, minor_unit_scale |
-| `accounts` | Activos líquidos/inversión | owner, type, `currency`, opening/effective data, archived_at |
+| `accounts` | Activos líquidos/inversión | `user_id`, type, `currency`, `opening_balance_minor`, `is_active` |
 | `credit_cards` | Línea/pasivo de crédito | owner, issuer, product, `currency`, limit, statement_day, payment_days, archived_at |
 | `card_baselines` | Punto de partida de deuda | card, policy enum, effective_date, amount_minor, evidence |
 | `people` | Terceros de cuentas por cobrar | owner, display_name, contact data, archived_at |
-| `categories` | Clasificación ingreso/gasto | owner, kind, parent, archived_at |
+| `categories` | Catálogo mínimo de clasificación | id estable, kind, nombre, orden; categorías personalizadas son futuras |
 | `merchants` | Normalización opcional | owner, canonical_name |
 
 `accounts` y `credit_cards` no comparten una tabla de “cuentas genéricas”. Pueden implementar una interfaz común de medio financiero en la aplicación, pero mantienen restricciones, ciclos y cálculos distintos.
@@ -71,12 +71,13 @@ Los nombres son una propuesta para las migraciones futuras; esta fase no crea es
 | Entidad | Responsabilidad | Campos conceptuales clave |
 |---|---|---|
 | `financial_events` | Cabecera inmutable del hecho | owner, type, transaction_date, optional purchase/posted date, occurred_at, currency, amount_minor, effect_scope, status, source |
-| `event_entries` | Efectos exactos del evento | event, ledger_kind, account/card/receivable/person-credit reference, signed_amount_minor |
+| `account_entries` | Efectos exactos implementados para cuentas | event, account, `signed_amount_minor`; inmutable |
+| `event_entries` | Evolución conceptual multiledger | event, ledger_kind, account/card/receivable/person-credit reference, signed_amount_minor |
 | `expense_allocations` | División personal/terceros | event, allocation_type, person, amount_minor, category |
 | `event_links` | Relaciones semánticas | source_event, target_event, relation_type |
 | `reversals` | Pareja original-compensación | original_event, reversal_event, reason |
 
-`financial_events` expresa qué sucedió; `event_entries` permite explicar el impacto en activos, pasivos, cuentas por cobrar y saldos a favor. `expense_allocations` conserva por separado el gasto personal y las partes de terceros. Las restricciones diferidas o la RPC comprueban que las asignaciones sumen el total. `effect_scope` distingue eventos `impacting` de evidencia `historical_non_impacting` anterior al baseline.
+`financial_events` expresa qué sucedió. En Fase 2, `account_entries` materializa únicamente deltas de cuentas; fases posteriores ampliarán el patrón para tarjetas, receivables y saldos a favor sin reinterpretar estas entradas. `expense_allocations` seguirá conservando por separado el gasto personal y las partes de terceros cuando exista el agregado compra.
 
 No se expone al cliente una operación genérica para insertar `event_entries`. Solo RPC tipados pueden crear hechos financieros asentados.
 
@@ -168,17 +169,23 @@ Reglas de integridad relacional:
 
 ## 5. Flujos atómicos previstos (RPC)
 
-Los nombres definitivos se fijarán al implementar. Cada RPC de escritura valida `auth.uid()`, ownership, estado, moneda, suma de asignaciones e idempotencia; fija un `search_path` seguro y tiene permisos mínimos. Todo RPC financiero recibe `idempotency_key` y un hash canónico del comando. La unicidad es `(user_id, command_type, idempotency_key)`: un replay idéntico devuelve el resultado persistido, un payload distinto falla y la primera ejecución serializa competidores mediante inserción/bloqueo del registro de idempotencia.
+Cada RPC de escritura valida `auth.uid()`, ownership, estado, moneda e idempotencia; fija `search_path = ''` y tiene permisos mínimos. La implementación usa unicidad global `(user_id, idempotency_key)` y conserva tipo, payload canónico y resultado. Un replay idéntico devuelve el resultado persistido, cualquier reutilización distinta falla y la transacción PostgreSQL serializa competidores.
 
 | RPC conceptual | Efectos indivisibles |
 |---|---|
+| `create_account` | cuenta, opening event/entry cuando es distinto de cero, comando y auditoría |
+| `update_account` / `archive_account` | proyección descriptiva/estado y auditoría idempotente |
+| `create_transaction` | evento de ingreso/gasto/ajuste, entrada firmada y auditoría |
+| `create_transfer` | un evento y dos entradas equivalentes en cuentas propias de la misma moneda |
+| `update_transaction` | reversión del original, reemplazo y auditoría |
+| `reverse_transaction` / `reverse_transfer` | evento compensatorio y entradas opuestas |
+| `update_transfer_notes` | anotación inmutable y auditable, sin efecto financiero |
 | `record_purchase` | evento, cargo a cuenta/tarjeta, gasto personal, receivables y vínculos |
 | `create_installment_purchase` | compra, plan, cuotas, asignaciones y obligación de tarjeta |
 | `import_started_installment_plan` | plan histórico, cuotas previas, pendiente y efecto baseline/no-baseline |
 | `receive_person_payment` | abono a cuenta, aplicación parcial/total y excedente a saldo a favor |
 | `apply_person_credit` | reducción coordinada de saldo a favor y receivable, sin nuevo flujo |
 | `record_card_payment` | reducción de cuenta y pasivo, aplicación a statements o evidencia histórica no-impacting |
-| `transfer_between_accounts` | salida y entrada equivalentes |
 | `record_refund` | crédito financiero y reversión parcial/total del efecto personal/tercero |
 | `reverse_financial_event` | evento compensatorio, vínculos y auditoría |
 | `close_card_statement` | ciclo, snapshot, items, total y fecha límite |
@@ -196,7 +203,7 @@ Las proyecciones son contratos de lectura compartidos por UI, exportaciones y re
 
 | Métrica | Fuente de verdad única |
 |---|---|
-| Saldo de cuenta | baseline/apertura de la cuenta + `event_entries` impacting de esa cuenta |
+| Saldo de cuenta | `sum(account_entries.amount_minor)`; el opening se materializa una sola vez como entrada |
 | Saldo utilizado de tarjeta | baseline + entradas de tarjeta impacting: cargos, principal completo de MSI nuevo, remaining principal histórico no incluido, pagos y reembolsos |
 | Pago actual | `remaining_due` del último `card_statement` cerrado aplicable, actualizado solo mediante asignaciones de pago/reversión |
 | Acumulado del ciclo | items elegibles por `transaction_date` dentro del `card_cycle` abierto; no es pago requerido |
@@ -208,7 +215,7 @@ Las proyecciones son contratos de lectura compartidos por UI, exportaciones y re
 | Patrimonio | por moneda: saldos de activos + receivables nominales - pasivos de tarjeta - saldos a favor/otros pasivos |
 | Presupuesto consumido | `personal_amount` vigente por categoría y periodo |
 
-Proyecciones previstas: `account_balances`, `card_used_balances`, `card_current_payment`, `card_cycle_accumulated`, `receivable_balances`, `person_current_due`, `person_credit_balances`, `personal_expenses`, `cash_flow`, `budget_consumption`, `net_worth` y `card_comparison`.
+Proyecciones implementadas: `account_balances` y `account_activity`, ambas vistas `security_invoker`. Proyecciones futuras: `card_used_balances`, `card_current_payment`, `card_cycle_accumulated`, `receivable_balances`, `person_current_due`, `person_credit_balances`, `personal_expenses`, `cash_flow`, `budget_consumption`, `net_worth` y `card_comparison`.
 
 Cada proyección devuelve IDs de desglose o cuenta con una consulta complementaria que explica sus componentes. Los totales no son columnas editables. Cualquier caché se invalida por las claves del agregado afectado después de que la RPC confirme.
 
@@ -338,7 +345,7 @@ Decisiones cerradas antes de la primera migración:
 - eventos complejos se revierten, no se borran;
 - RPC financieros usan idempotencia por usuario, tipo de comando y payload.
 
-Riesgos/decisiones que siguen abiertos para fases posteriores y no bloquean el esquema núcleo de Fase 1:
+Riesgos/decisiones que siguen abiertos para fases posteriores y no bloquean el esquema núcleo después de Fase 2:
 
 - tratamiento del saldo a favor de una **tarjeta** y pagos de tarjeta superiores al pasivo;
 - reglas específicas de emisores para mover fechas límite por fines de semana o festivos; el valor por defecto queda en días calendario sin ajuste;
@@ -358,7 +365,7 @@ Riesgos/decisiones que siguen abiertos para fases posteriores y no bloquean el e
 - Conciliación e importación dependen de idempotencia, eventos y explicación de saldos.
 - Exportación depende de consultas estables y privacidad; no debe definir una segunda lógica de cálculo.
 
-## 16. Estado de implementación después de Fase 1
+## 16. Estado de implementación después de Fase 2
 
 Implementado:
 
@@ -373,6 +380,12 @@ Implementado:
 - separación `date`/`timestamptz` en utilidades;
 - migración de `currencies` y `profiles`, trigger 1:1, RLS y grants explícitos;
 - pruebas frontend y reconstrucción/pruebas RLS sobre PostgreSQL 17 efímero.
+- tablas `accounts`, `categories`, `financial_events`, `account_entries`, `financial_commands`, `audit_events` y `financial_event_notes`;
+- vistas `account_balances` y `account_activity` con RLS heredada mediante `security_invoker`;
+- RPC tipados para crear/editar/archivar cuentas, registrar/editar/revertir movimientos y transferir/revertir;
+- rutas de cuentas, detalle y movimientos con queries TanStack, filtros y contexto preseleccionado;
+- patrones visuales `PageHeader`, `SectionHeader`, `ActionMenu`, `FilterBar`, `Sheet`, `ConfirmDialog`, toast, skeletons y estados vacíos;
+- dirección visual premium light/dark: base neutral cálida, acento verde profundo, cifras protagonistas, superficies suaves y motion de 140–360 ms con reduced motion.
 
 La representación monetaria implementada es:
 
@@ -385,11 +398,10 @@ PostgreSQL bigint minor units
 
 No implementado y conservado únicamente como diseño futuro:
 
-- `accounts`, `credit_cards`, `financial_events`, `event_entries` y transacciones;
 - baselines, ciclos, statements y pagos de tarjeta;
 - personas, receivables, saldos a favor y cobros;
 - installment plans/MSI;
 - presupuestos, recurrencias, planificación, patrimonio y reportes;
 - importación, conciliación, recibos y exportación.
 
-La ausencia deliberada de estas tablas evita consolidar modelos provisionales antes de sus fases.
+No existen implementaciones parciales de tarjetas, statements, MSI, personas, receivables, presupuestos, planificación, salud, conciliación ni reportes. La Fase 3 requiere autorización explícita.

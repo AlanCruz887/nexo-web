@@ -331,9 +331,19 @@ Son operaciones indivisibles:
 
 O se registran todos sus efectos, o no se registra ninguno. Cada comando acepta una clave idempotente por usuario para que un reintento no duplique dinero.
 
-La clave se identifica de forma única por `(user_id, command_type, idempotency_key)`. El mismo reintento con el mismo payload devuelve el resultado original; reutilizar la clave con un payload diferente falla. Los estados `in_progress`, `completed` y `failed_retryable` impiden carreras y permiten recuperación controlada.
+La clave se identifica de forma única por `(user_id, idempotency_key)`. El registro conserva además `command_type`, payload canónico y resultado. El mismo reintento con el mismo comando y payload devuelve el resultado original; reutilizar la clave para otro comando o payload falla. La inserción única participa en la misma transacción PostgreSQL que el evento: competidores esperan el resultado confirmado y una ejecución fallida revierte también la reserva.
 
-## 25. Fechas de compra e importación
+## 25. Cuentas y movimientos base
+
+- El saldo de una cuenta es `sum(account_entries.amount_minor)` para esa cuenta. El saldo inicial se materializa una sola vez como evento `opening` y entrada firmada; `accounts.opening_balance_minor` conserva el baseline declarado, pero no existe un `current_balance` editable.
+- Un ingreso personal verdadero crea una entrada positiva y se clasifica como `income`. Transferencias, cobros futuros de personas, reembolsos y pagos de tarjeta no reutilizan esa clasificación.
+- En Fase 2, un gasto simple cumple `personal_amount_minor = amount_minor`; la futura división con terceros se aplicará únicamente al agregado compra.
+- Una transferencia entre cuentas genera dos entradas bajo un solo evento: salida negativa y entrada positiva por el mismo importe y moneda. Su suma global es cero y no aumenta ingreso, gasto personal ni presupuesto.
+- Sin FX explícito, origen y destino de una transferencia deben tener la misma moneda.
+- Archivar una cuenta la excluye de nuevos movimientos y selectores normales, pero no elimina su saldo, sus entradas ni su actividad histórica.
+- Los eventos y entradas asentados son inmutables. Editar un movimiento simple crea reversión más reemplazo; eliminarlo o revertir una transferencia crea entradas opuestas. Editar notas de transferencia agrega una nota versionada sin cambiar principal ni cuentas.
+
+## 26. Fechas de compra e importación
 
 - En el MVP, `transaction_date` es la única fuente de verdad para ciclos, presupuestos, cash flow y reportes por fecha.
 - El modelo queda preparado para `purchase_date` y `posted_date`, ambas opcionales. No se inventa ninguna de ellas.

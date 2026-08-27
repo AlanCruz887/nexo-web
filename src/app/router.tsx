@@ -22,6 +22,9 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { path: "/inicio", lazy: async () => ({ Component: (await import("@/features/home/home-page")).HomePage }) },
+          { path: "/cuentas", lazy: async () => ({ Component: (await import("@/features/accounts/accounts-page")).AccountsPage }) },
+          { path: "/cuentas/:id", lazy: async () => ({ Component: (await import("@/features/accounts/account-detail-page")).AccountDetailPage }) },
+          { path: "/movimientos", lazy: async () => ({ Component: (await import("@/features/movements/movements-page")).MovementsPage }) },
           { path: "/configuracion", lazy: async () => ({ Component: (await import("@/features/settings/settings-page")).SettingsPage }) },
         ],
       },

@@ -1,10 +1,10 @@
 # Nexo
 
-Nexo es una aplicación financiera personal construida por fases. La Fase 1 entrega únicamente el fundamento técnico: frontend, autenticación, perfil base, moneda, privacidad y seguridad inicial. Todavía no existen cuentas, tarjetas, movimientos, personas, MSI ni reportes.
+Nexo es una aplicación financiera personal construida por fases. La Fase 2 agrega cuentas, movimientos simples y transferencias sobre el fundamento seguro de identidad, moneda y privacidad de la Fase 1.
 
 ## Estado
 
-**Fase 1 completada — Fundamento técnico, autenticación y perfil base.**
+**Fase 2 completada — Cuentas, movimientos base y transferencias.**
 
 Implementado:
 
@@ -19,10 +19,16 @@ Implementado:
 - shell responsive, configuración y privacidad `hide_money`;
 - frontera monetaria exacta PostgreSQL `bigint` ↔ API `string` ↔ TypeScript `bigint`;
 - pruebas frontend y pruebas RLS contra PostgreSQL local efímero.
+- cuentas en MXN, USD o EUR, con archivado e historial preservado;
+- saldos reconstruidos desde eventos y entradas inmutables;
+- ingresos, gastos personales y ajustes simples;
+- transferencias atómicas, de dos entradas y sin efecto en ingreso/gasto;
+- RPC financieros idempotentes y reversión auditable;
+- timeline de movimientos, filtros, drawers/bottom sheets y UI premium responsive.
 
 Diseño futuro, no implementado:
 
-- cuentas, tarjetas y movimientos;
+- tarjetas de crédito y statements;
 - statements, baseline y MSI;
 - personas y receivables;
 - presupuestos, planificación y reportes;
@@ -57,7 +63,7 @@ El navegador solo recibe la URL y la publishable key. Nunca agregues `service_ro
 npm run dev
 ```
 
-Rutas de la Fase 1:
+Rutas implementadas:
 
 - `/registro`
 - `/login`
@@ -65,16 +71,24 @@ Rutas de la Fase 1:
 - `/actualizar-contrasena`
 - `/onboarding`
 - `/inicio`
+- `/cuentas`
+- `/cuentas/:id`
+- `/movimientos`
 - `/configuracion`
 
 ## Base de datos
 
-La única migración productiva de esta fase está en `supabase/migrations/` y crea exclusivamente:
+Las migraciones productivas están en `supabase/migrations/` y crean:
 
 - `public.currencies` con MXN, USD y EUR;
 - `public.profiles` relacionado 1:1 con `auth.users`;
 - funciones privadas para creación de perfil y `updated_at`;
 - RLS, políticas y grants mínimos.
+- `public.accounts` y catálogo mínimo `public.categories`;
+- `public.financial_events` y `public.account_entries` inmutables;
+- `public.financial_commands`, `public.audit_events` y notas versionadas;
+- vistas `security_invoker` para saldos y actividad;
+- RPC tipados para cuentas, movimientos, transferencias, edición y reversión.
 
 Para aplicar el stack completo cuando Docker esté disponible:
 
@@ -83,7 +97,7 @@ npm exec supabase start
 npm exec supabase db reset
 ```
 
-La prueba local incluida no necesita Docker. Crea PostgreSQL en un directorio temporal, reconstruye todas las migraciones y valida el aislamiento de dos perfiles:
+La prueba local incluida no necesita Docker. Crea PostgreSQL en un directorio temporal, reconstruye todas las migraciones y valida aislamiento A/B, saldos, transferencias, reversión e idempotencia:
 
 ```bash
 npm run test:db
@@ -115,4 +129,4 @@ npm run build
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [PLAN.md](./PLAN.md)
 
-No debe comenzar la Fase 2 sin autorización explícita.
+No debe comenzar la Fase 3 sin autorización explícita.

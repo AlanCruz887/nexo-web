@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 interface FormFieldProps {
   children: ReactNode;
   error?: string | undefined;
-  hint?: string;
+  hint?: string | undefined;
   id: string;
   label: string;
 }

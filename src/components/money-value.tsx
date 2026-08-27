@@ -11,7 +11,7 @@ interface MoneyValueProps extends Omit<HTMLAttributes<HTMLSpanElement>, "childre
   currency: CurrencyCode;
   privacy?: boolean | undefined;
   sign?: "auto" | "always" | "never";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 export function MoneyValue({
@@ -33,6 +33,7 @@ export function MoneyValue({
         size === "sm" && "text-sm",
         size === "md" && "text-base",
         size === "lg" && "text-2xl",
+        size === "xl" && "text-4xl font-semibold sm:text-5xl",
         className,
       )}
       aria-label={isHidden ? "Cantidad oculta" : undefined}
