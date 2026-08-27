@@ -10,6 +10,7 @@ export function useProfile(userId: string | undefined) {
     queryKey: profileQueryKey(userId ?? "missing"),
     queryFn: () => profileService.getProfile(userId as string),
     enabled: Boolean(userId),
+    staleTime: 5 * 60_000,
   });
 }
 

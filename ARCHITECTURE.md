@@ -190,7 +190,7 @@ Cada RPC de escritura valida `auth.uid()`, ownership, estado, moneda e idempoten
 | `reverse_financial_event` | evento compensatorio, vínculos y auditoría |
 | `close_card_statement` | ciclo, snapshot, items, total y fecha límite |
 | `confirm_import_batch` | filas aprobadas a eventos, vínculo de origen y marca idempotente |
-| `archive_entity` / `restore_entity` | estado y auditoría con validación de dependencias |
+| `archive_account` / `restore_account` | cambia disponibilidad de una cuenta propia, con idempotencia y auditoría; no altera entradas ni saldo |
 | `reconcile_balance` | snapshot comparable y resoluciones explícitas, sin ajuste oculto |
 
 Las funciones privilegiadas, si fueran estrictamente necesarias, vivirán fuera de esquemas expuestos, revocarán `EXECUTE` a `PUBLIC`, autorizarán al actor dentro del cuerpo y usarán un `search_path` fijo. Se prefiere `SECURITY INVOKER`; `SECURITY DEFINER` no se utilizará para eludir RLS.
@@ -207,15 +207,16 @@ Las proyecciones son contratos de lectura compartidos por UI, exportaciones y re
 | Saldo utilizado de tarjeta | baseline + entradas de tarjeta impacting: cargos, principal completo de MSI nuevo, remaining principal histórico no incluido, pagos y reembolsos |
 | Pago actual | `remaining_due` del último `card_statement` cerrado aplicable, actualizado solo mediante asignaciones de pago/reversión |
 | Acumulado del ciclo | items elegibles por `transaction_date` dentro del `card_cycle` abierto; no es pago requerido |
-| Gasto personal | suma de `expense_allocations.personal_amount` de eventos de gasto vigentes |
-| Cash flow | entradas y salidas totales de `event_entries` de cuentas por periodo; su clasificación separa ingresos/gastos de transferencias, cobros y pagos |
+| Gasto personal | Fase 2: suma de `financial_events.personal_amount_minor` para gastos vigentes; cuando existan compras distribuidas, la proyección compartida sumará sus asignaciones personales sin cambiar el contrato |
+| Ingreso | suma de `financial_events.amount_minor` para eventos `income` vigentes; transferencias, reembolsos, ajustes y cobros futuros nunca entran aquí |
+| Cash flow | entradas y salidas firmadas de `account_entries` por `occurred_on`; se presentan por moneda y la clasificación del evento mantiene transferencias separadas de ingreso/gasto |
 | Receivable pendiente | principal de `receivable_items` menos pagos, créditos aplicados, reembolsos y reversiones |
 | Cuota actual de persona | `receivable_items` exigibles dentro del periodo consolidado actual, menos aplicaciones; excluye periodos futuros |
 | Saldo a favor de persona | suma neta de `person_credit_entries` no aplicada |
 | Patrimonio | por moneda: saldos de activos + receivables nominales - pasivos de tarjeta - saldos a favor/otros pasivos |
 | Presupuesto consumido | `personal_amount` vigente por categoría y periodo |
 
-Proyecciones implementadas: `account_balances` y `account_activity`, ambas vistas `security_invoker`. Proyecciones futuras: `card_used_balances`, `card_current_payment`, `card_cycle_accumulated`, `receivable_balances`, `person_current_due`, `person_credit_balances`, `personal_expenses`, `cash_flow`, `budget_consumption`, `net_worth` y `card_comparison`.
+Proyecciones implementadas: `account_balances` y `account_activity`, ambas vistas `security_invoker`; esta última excluye eventos revertidos y entrega el importe personal y la clasificación que consumen las métricas de Fase 2. Proyecciones futuras: `card_used_balances`, `card_current_payment`, `card_cycle_accumulated`, `receivable_balances`, `person_current_due`, `person_credit_balances`, `personal_expenses`, `cash_flow`, `budget_consumption`, `net_worth` y `card_comparison`.
 
 Cada proyección devuelve IDs de desglose o cuenta con una consulta complementaria que explica sus componentes. Los totales no son columnas editables. Cualquier caché se invalida por las claves del agregado afectado después de que la RPC confirme.
 
@@ -382,10 +383,14 @@ Implementado:
 - pruebas frontend y reconstrucción/pruebas RLS sobre PostgreSQL 17 efímero.
 - tablas `accounts`, `categories`, `financial_events`, `account_entries`, `financial_commands`, `audit_events` y `financial_event_notes`;
 - vistas `account_balances` y `account_activity` con RLS heredada mediante `security_invoker`;
-- RPC tipados para crear/editar/archivar cuentas, registrar/editar/revertir movimientos y transferir/revertir;
-- rutas de cuentas, detalle y movimientos con queries TanStack, filtros y contexto preseleccionado;
+- RPC tipados para crear/editar/archivar/restaurar cuentas, registrar/editar/revertir movimientos y transferir/revertir;
+- rutas canónicas de cuentas, detalle y movimientos, con alias `/accounts`, `/accounts/:id` y `/transactions`, queries TanStack, filtros y contexto preseleccionado;
 - patrones visuales `PageHeader`, `SectionHeader`, `ActionMenu`, `FilterBar`, `Sheet`, `ConfirmDialog`, toast, skeletons y estados vacíos;
-- dirección visual premium light/dark: base neutral cálida, acento verde profundo, cifras protagonistas, superficies suaves y motion de 140–360 ms con reduced motion.
+- capa visual reconstruida sobre tokens de color, spacing, radius, tipografía, sombras, motion, breakpoints y z-index; base blanca, gris neutro y azul financiero, con verde solo semántico para resultados positivos y rojo para gasto, error y destrucción;
+- shell desacoplado en sidebar compacta, topbar, quick-add global, navegación móvil y command palette (`Cmd/Ctrl + K`);
+- operaciones de creación y edición en dialog centrado para desktop y bottom sheet para mobile; drawers reservados a detalle e inspección;
+- duplicación de movimiento como borrador local con fecha de hoy; no escribe hasta confirmar;
+- dashboard narrativo, listas financieras, formularios responsivos y configuración por secciones, con light/dark, privacidad y reduced motion.
 
 La representación monetaria implementada es:
 

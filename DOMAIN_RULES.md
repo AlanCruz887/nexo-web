@@ -340,8 +340,10 @@ La clave se identifica de forma única por `(user_id, idempotency_key)`. El regi
 - En Fase 2, un gasto simple cumple `personal_amount_minor = amount_minor`; la futura división con terceros se aplicará únicamente al agregado compra.
 - Una transferencia entre cuentas genera dos entradas bajo un solo evento: salida negativa y entrada positiva por el mismo importe y moneda. Su suma global es cero y no aumenta ingreso, gasto personal ni presupuesto.
 - Sin FX explícito, origen y destino de una transferencia deben tener la misma moneda.
-- Archivar una cuenta la excluye de nuevos movimientos y selectores normales, pero no elimina su saldo, sus entradas ni su actividad histórica.
-- Los eventos y entradas asentados son inmutables. Editar un movimiento simple crea reversión más reemplazo; eliminarlo o revertir una transferencia crea entradas opuestas. Editar notas de transferencia agrega una nota versionada sin cambiar principal ni cuentas.
+- Archivar una cuenta la excluye de nuevos movimientos y selectores normales, pero no elimina su saldo, sus entradas ni su actividad histórica. Restaurarla solo vuelve a habilitarla; no recrea el opening balance ni modifica entradas existentes.
+- Los eventos y entradas asentados son inmutables. Editar un movimiento simple crea reversión más reemplazo; eliminarlo registra la acción de producto `transaction_deleted`, pero materializa una reversión; revertir una transferencia crea entradas opuestas para ambos lados. Editar notas de transferencia agrega una nota versionada sin cambiar principal ni cuentas.
+- Duplicar un movimiento crea únicamente un borrador con importe, cuenta, categoría y descripción precargados y fecha de hoy. No produce evento ni entrada hasta que el usuario confirma.
+- Fuentes de verdad de Fase 2: saldo = `account_balances`; actividad vigente = `account_activity`; gasto personal = `personal_amount_minor` de gastos vigentes; ingreso = importe de eventos `income` vigentes; cash flow = entradas firmadas de cuenta por fecha. La UI consume estos contratos y no redefine clasificaciones financieras.
 
 ## 26. Fechas de compra e importación
 

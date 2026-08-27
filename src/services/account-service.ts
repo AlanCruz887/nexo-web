@@ -58,4 +58,13 @@ export const accountService = {
     if (error) throw error;
     return data;
   },
+
+  async restore(accountId: string, idempotencyKey: string) {
+    const { data, error } = await supabase.rpc("restore_account", {
+      p_account_id: accountId,
+      p_idempotency_key: idempotencyKey,
+    });
+    if (error) throw error;
+    return data;
+  },
 };

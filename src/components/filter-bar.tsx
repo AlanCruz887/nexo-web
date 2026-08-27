@@ -9,7 +9,7 @@ export function FilterBar({ children }: { children: ReactNode }) {
 export function FilterPill({ active, children, onClick }: { active?: boolean; children: ReactNode; onClick: () => void }) {
   return (
     <button
-      className={cn("min-h-10 shrink-0 rounded-full border border-border bg-surface px-4 text-sm font-medium text-muted-foreground transition duration-fast ease-nexo hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40", active && "border-primary/20 bg-primary/10 text-primary")}
+      className={cn("min-h-10 shrink-0 rounded-full border border-border bg-surface px-4 text-sm font-medium text-muted-foreground transition duration-fast ease-nexo hover:border-primary/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 active:scale-[.98]", active && "border-primary/15 bg-primary-soft text-primary-strong")}
       onClick={onClick}
       type="button"
     >

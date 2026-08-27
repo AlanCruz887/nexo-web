@@ -27,7 +27,7 @@ export function MovementList({ movements, onSelect }: { movements: AccountActivi
       {Array.from(groups.entries()).map(([date, items]) => (
         <section key={date}>
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{dayLabel(date)}</h3>
-          <div className="divide-y divide-border/70">
+          <div className="divide-y divide-border/60">
             {items.map((movement, index) => <MovementRow key={`${movement.event_id}-${movement.account_id}`} index={index} movement={movement} onClick={() => onSelect(movement.event_id)} />)}
           </div>
         </section>
@@ -43,18 +43,18 @@ function MovementRow({ index, movement, onClick }: { index: number; movement: Ac
   return (
     <motion.button
       animate={{ opacity: 1, y: 0 }}
-      className="group grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl px-1 py-3.5 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-3"
+      className="group grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl px-2 py-4 text-left transition-colors hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 sm:px-3"
       initial={reduceMotion ? false : { opacity: 0, y: 5 }}
       onClick={onClick}
-      transition={{ delay: reduceMotion ? 0 : Math.min(index * 0.025, 0.15), duration: motionTokens.duration.normal, ease: motionTokens.ease }}
+      transition={{ delay: reduceMotion ? 0 : Math.min(index * 0.03, 0.15), duration: motionTokens.duration.normal, ease: motionTokens.ease.enter }}
       type="button"
     >
-      <span className={cn("grid size-10 place-items-center rounded-2xl", movement.kind === "transfer" ? "bg-primary/10 text-primary" : isPositive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}><Icon className="size-4.5" /></span>
+      <span className={cn("grid size-10 place-items-center rounded-xl", movement.kind === "transfer" ? "bg-primary-soft text-primary" : isPositive ? "bg-success/10 text-success" : "bg-surface-secondary text-muted-foreground")}><Icon className="size-4.5" /></span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-foreground">{movement.description}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{movement.account_name}{!movement.account_is_active ? " · Archivada" : ""} · {movement.kind === "transfer" ? "Transferencia" : movement.category_name ?? "Sin categoría"}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{movement.kind === "transfer" ? "Transferencia" : movement.category_name ?? "Sin categoría"} · {movement.account_name}{!movement.account_is_active ? " · Archivada" : ""}</span>
       </span>
-      <MoneyValue amount={movement.account_delta_minor} className={cn("text-sm", isPositive && "text-success")} currency={movement.currency} sign="always" />
+      <MoneyValue amount={movement.account_delta_minor} className={cn("text-sm", isPositive ? "text-success" : movement.kind === "expense" ? "text-danger" : "text-foreground")} currency={movement.currency} sign="always" />
     </motion.button>
   );
 }

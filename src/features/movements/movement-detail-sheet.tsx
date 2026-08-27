@@ -8,8 +8,9 @@ import { ConfirmDialog, Sheet } from "@/components/sheet";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/toast";
 import { useMovement, useReverseMovement, useUpdateTransferNotes } from "@/hooks/use-movements";
-import { formatFinancialDate } from "@/lib/dates";
+import { formatAuditTimestamp, formatFinancialDate } from "@/lib/dates";
 import { toUserMessage } from "@/lib/errors";
+import { formatMoney } from "@/lib/money";
 import type { AccountActivity, AccountBalance } from "@/types/database";
 import { MovementFormSheet } from "@/features/movements/movement-form-sheet";
 
@@ -56,16 +57,18 @@ export function MovementDetailSheet({ accounts, eventId, onOpenChange, open }: {
                 { icon: <Trash2 className="size-4" />, label: "Eliminar", onSelect: () => setConfirmOpen(true), tone: "danger" },
               ]} /> : null}
             </div>
-            <div className="mt-8 rounded-3xl bg-muted/75 p-5">
+            <div className="mt-8 rounded-2xl border border-border/70 bg-surface-secondary p-5">
               <Detail label="Descripción" value={primary.description} />
               {isTransfer ? <TransferAccounts legs={movement.data ?? []} /> : <Detail label="Cuenta" value={`${primary.account_name}${!primary.account_is_active ? " · Archivada" : ""}`} />}
               <Detail label="Categoría" value={primary.category_name ?? (isTransfer ? "Transferencia" : "Sin categoría")} />
               <Detail label="Fecha" value={formatFinancialDate(primary.occurred_on, "dd MMM yyyy")} />
+              <Detail label="Creado" value={formatAuditTimestamp(primary.created_at, "dd MMM yyyy, HH:mm")} />
               <Detail label="Notas" value={primary.notes || "Sin notas"} last />
             </div>
-            {!isOpening ? <div className="mt-5 flex gap-2">
+            {!isOpening ? <div className="mt-5 grid grid-cols-3 gap-2">
               <Button className="flex-1" onClick={() => setEditOpen(true)} variant="secondary">{isTransfer ? "Editar notas" : "Editar"}</Button>
               {!isTransfer ? <Button onClick={() => setDuplicateOpen(true)} variant="ghost">Duplicar</Button> : null}
+              <Button onClick={() => setConfirmOpen(true)} variant="danger">{isTransfer ? "Revertir" : "Eliminar"}</Button>
             </div> : null}
           </div>
         ) : <ErrorState message="No encontramos este movimiento." />}
@@ -75,7 +78,7 @@ export function MovementDetailSheet({ accounts, eventId, onOpenChange, open }: {
       {primary && isTransfer ? <TransferNotesSheet event={primary} onOpenChange={setEditOpen} open={editOpen} /> : null}
       <ConfirmDialog
         confirmLabel={isTransfer ? "Revertir transferencia" : "Eliminar movimiento"}
-        description={isTransfer ? "Se crearán entradas opuestas para restaurar ambas cuentas. La evidencia original se conserva." : "El movimiento no se borrará: Nexo creará una reversión que restaura el saldo y conserva auditoría."}
+        description={isTransfer ? `Se crearán entradas opuestas para revertir ${primary?.description ?? "la transferencia"} por ${primary ? formatMoney(primary.amount_minor, primary.currency) : "su importe"}. La evidencia original se conserva.` : `Nexo revertirá ${primary?.description ?? "el movimiento"} por ${primary ? formatMoney(primary.amount_minor, primary.currency) : "su importe"}. El registro original y su auditoría se conservan.`}
         isPending={reverse.isPending}
         onConfirm={() => void handleReverse()}
         onOpenChange={setConfirmOpen}

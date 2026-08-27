@@ -167,6 +167,26 @@ begin
     raise exception 'idempotent archive duplicated audit evidence';
   end if;
 
+  perform public.restore_account(source_account, 'phase2-restore-source-a');
+  perform public.restore_account(source_account, 'phase2-restore-source-a');
+  if not exists (
+    select 1 from public.accounts where id = source_account and is_active
+  ) then
+    raise exception 'restored account remained archived';
+  end if;
+  if (
+    select count(*) from public.audit_events
+    where action = 'account_restored' and entity_id = source_account
+  ) <> 1 then
+    raise exception 'idempotent restore did not preserve exactly one audit event';
+  end if;
+  if not exists (
+    select 1 from public.audit_events
+    where action = 'transaction_deleted' and entity_id = updated_expense_event
+  ) then
+    raise exception 'transaction delete audit event missing';
+  end if;
+
   if income_event is null then raise exception 'income event was not created'; end if;
 end;
 $$;
@@ -234,6 +254,20 @@ begin
       event_b, 1000, 'Ataque', 'other_expense', current_date, null, 'phase2-cross-user-update'
     );
     raise exception 'user A edited user B movement';
+  exception
+    when no_data_found then null;
+  end;
+
+  begin
+    perform public.archive_account(account_b, 'phase2-cross-user-archive');
+    raise exception 'user A archived user B account';
+  exception
+    when no_data_found then null;
+  end;
+
+  begin
+    perform public.restore_account(account_b, 'phase2-cross-user-restore');
+    raise exception 'user A restored user B account';
   exception
     when no_data_found then null;
   end;

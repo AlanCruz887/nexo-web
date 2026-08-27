@@ -28,6 +28,13 @@ export function parseAuditTimestamp(value: string): Date {
   return parsed;
 }
 
+export function formatAuditTimestamp(
+  value: AuditTimestamp,
+  pattern = "dd/MM/yyyy HH:mm",
+): string {
+  return format(parseAuditTimestamp(value), pattern);
+}
+
 export function getBrowserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }

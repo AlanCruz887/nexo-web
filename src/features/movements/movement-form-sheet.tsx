@@ -4,14 +4,15 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
 import { FormField } from "@/components/form-field";
-import { Sheet, SheetFooter } from "@/components/sheet";
+import { ResponsiveDialog } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/toast";
 import { useCategories, useCreateMovement, useUpdateMovement } from "@/hooks/use-movements";
 import { toUserMessage } from "@/lib/errors";
-import { minorToDisplay, parseMoneyInput } from "@/lib/money";
+import { parseMoneyInput } from "@/lib/money";
+import { movementDraftFromActivity } from "@/lib/movement-draft";
 import { movementFormSchema, type MovementFormInput } from "@/schemas/movement";
 import type { AccountActivity, AccountBalance, TransactionKind } from "@/types/database";
 
@@ -52,20 +53,13 @@ export function MovementFormSheet({
   const sourceMovement = existing ?? prefill;
 
   useEffect(() => {
-    form.reset(sourceMovement ? {
-      amount: minorToDisplay(BigInt(sourceMovement.amount_minor)),
-      account_id: sourceMovement.account_id,
-      kind: sourceMovement.kind === "income" ? "income" : "expense",
-      category_id: sourceMovement.category_id ?? (sourceMovement.kind === "income" ? "other_income" : "other_expense"),
-      occurred_on: sourceMovement.occurred_on,
-      description: sourceMovement.description,
-      notes: sourceMovement.notes ?? "",
-    } : {
+    const today = format(new Date(), "yyyy-MM-dd");
+    form.reset(sourceMovement ? movementDraftFromActivity(sourceMovement, existing ? "edit" : "duplicate", today) : {
       amount: "",
       account_id: defaultAccountId ?? accounts[0]?.id ?? "",
       kind: defaultKind,
       category_id: defaultKind === "income" ? "salary" : "other_expense",
-      occurred_on: format(new Date(), "yyyy-MM-dd"),
+      occurred_on: today,
       description: "",
       notes: "",
     });
@@ -95,25 +89,27 @@ export function MovementFormSheet({
   const mutation = existing ? updateMovement : createMovement;
 
   return (
-    <Sheet
+    <ResponsiveDialog
       description={existing ? "La edición conserva el historial mediante una reversión y reemplazo." : "Primero el importe. Los detalles vienen después."}
+      footer={<><Button onClick={() => onOpenChange(false)} type="button" variant="ghost">Cancelar</Button><Button disabled={mutation.isPending} form="movement-form" type="submit">{mutation.isPending ? "Guardando…" : existing ? "Guardar cambios" : "Guardar movimiento"}</Button></>}
       onOpenChange={onOpenChange}
       open={open}
+      size="medium"
       title={existing ? "Editar movimiento" : kind === "income" ? "Nuevo ingreso" : "Nuevo gasto"}
     >
-      <form onSubmit={(event) => void form.handleSubmit(handleSubmit)(event)}>
-        <div className="space-y-6">
+      <form id="movement-form" onSubmit={(event) => void form.handleSubmit(handleSubmit)(event)}>
+        <div className="space-y-7">
           <FormField error={form.formState.errors.amount?.message} id="movement-amount" label="¿Cuánto?">
             <div className="relative">
               <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-3xl font-medium text-muted-foreground">$</span>
-              <Input autoFocus className="h-20 rounded-none border-x-0 border-t-0 bg-transparent pl-7 text-4xl font-semibold tracking-tight tabular-nums focus-visible:ring-0" id="movement-amount" inputMode="decimal" placeholder="0.00" {...form.register("amount")} />
+              <Input autoFocus className="h-24 rounded-none border-x-0 border-t-0 bg-transparent pl-7 text-5xl font-semibold tracking-[-0.04em] tabular-nums shadow-none focus-visible:ring-0" id="movement-amount" inputMode="decimal" placeholder="0.00" {...form.register("amount")} />
             </div>
           </FormField>
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1.5">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-surface-secondary p-1.5">
             {(["expense", "income"] as const).map((value) => (
               <button
                 key={value}
-                className={`min-h-11 rounded-xl text-sm font-semibold transition ${kind === value ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground"}`}
+                className={`min-h-11 rounded-lg text-sm font-semibold transition ${kind === value ? "bg-surface text-primary-strong shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                 onClick={() => {
                   form.setValue("kind", value);
                   form.setValue("category_id", value === "income" ? "salary" : "other_expense");
@@ -145,8 +141,7 @@ export function MovementFormSheet({
           </FormField>
           {form.formState.errors.root ? <p className="text-sm text-danger" role="alert">{form.formState.errors.root.message}</p> : null}
         </div>
-        <SheetFooter><Button className="flex-1" disabled={mutation.isPending} type="submit">{mutation.isPending ? "Guardando…" : existing ? "Guardar cambios" : "Registrar movimiento"}</Button></SheetFooter>
       </form>
-    </Sheet>
+    </ResponsiveDialog>
   );
 }

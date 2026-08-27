@@ -8,6 +8,7 @@ import { FilterBar, FilterPill } from "@/components/filter-bar";
 import { MoneyValue } from "@/components/money-value";
 import { PageHeader, SectionHeader } from "@/components/page-header";
 import { PageTransition } from "@/components/page-transition";
+import { AccountsSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { useAccounts, sumBalancesByCurrency } from "@/hooks/use-accounts";
 import { useMovements } from "@/hooks/use-movements";
@@ -30,7 +31,7 @@ export function AccountsPage() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
 
-  if (accounts.isLoading || profile.isLoading) return <LoadingState label="Preparando tus cuentas" />;
+  if ((accounts.isLoading && !accounts.data) || (profile.isLoading && !profile.data)) return <AccountsSkeleton />;
   if (accounts.isError) return <ErrorState message={toUserMessage(accounts.error)} onRetry={() => void accounts.refetch()} />;
   const allAccounts = accounts.data ?? [];
   const activeAccounts = allAccounts.filter((account) => account.is_active);
@@ -40,30 +41,29 @@ export function AccountsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-9">
+      <div className="space-y-12">
         <PageHeader actions={<Button onClick={() => setAccountFormOpen(true)}><Plus className="size-4" />Agregar cuenta</Button>} eyebrow="Tu dinero" subtitle="Saldos reconstruidos desde movimientos, sin conversiones automáticas." title="Cuentas" />
 
         {allAccounts.length === 0 ? (
           <EmptyState action={<Button onClick={() => setAccountFormOpen(true)}>Agregar cuenta</Button>} description="Agrega tu primera cuenta para empezar a registrar movimientos." title="Todavía no tienes cuentas" />
         ) : (
           <>
-            <section className="relative overflow-hidden rounded-[30px] bg-foreground px-6 py-7 text-background sm:px-8 sm:py-9">
-              <div className="absolute -right-16 -top-20 size-52 rounded-full bg-primary/25 blur-3xl" />
-              <div className="relative flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
+            <section className="border-b border-border/70 pb-9">
+              <div className="flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-sm font-medium text-background/60">Dinero disponible</p>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Total disponible</p>
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-                    {totalEntries.map(([currency, amount]) => <MoneyValue key={currency} amount={amount ?? 0n} className="block" currency={currency as AccountBalance["currency"]} size="xl" />)}
+                    {totalEntries.map(([currency, amount]) => <MoneyValue key={currency} amount={amount ?? 0n} className="block text-[clamp(2.6rem,6vw,4.8rem)] leading-none tracking-[-0.06em]" currency={currency as AccountBalance["currency"]} />)}
                   </div>
-                  {totalEntries.length > 1 ? <p className="mt-3 text-xs text-background/55">Totales separados por moneda. Nexo no inventa tipos de cambio.</p> : null}
+                  {totalEntries.length > 1 ? <p className="mt-3 text-xs text-muted-foreground">Totales separados por moneda. Nexo no inventa tipos de cambio.</p> : null}
                 </div>
-                <Button className="border-background/15 bg-background/10 text-background hover:bg-background/15" disabled={activeAccounts.length < 2} onClick={() => setTransferOpen(true)} variant="secondary"><ArrowLeftRight className="size-4" />Transferir</Button>
+                <Button disabled={activeAccounts.length < 2} onClick={() => setTransferOpen(true)} variant="secondary"><ArrowLeftRight className="size-4" />Transferir</Button>
               </div>
             </section>
 
             <section className="space-y-4">
               <SectionHeader action={<FilterBar><FilterPill active={view === "active"} onClick={() => setView("active")}>Activas</FilterPill><FilterPill active={view === "archived"} onClick={() => setView("archived")}>Archivadas</FilterPill></FilterBar>} title="Tus cuentas" />
-              {visibleAccounts.length ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{visibleAccounts.map((account, index) => <AccountCard key={account.id} account={account} featured={view === "active" && index === 0} />)}</div> : <EmptyState description={view === "archived" ? "Las cuentas que archives aparecerán aquí con todo su historial." : "No hay cuentas activas."} title={view === "archived" ? "Sin cuentas archivadas" : "Sin cuentas activas"} />}
+              {visibleAccounts.length ? <div className="grid gap-4 md:grid-cols-2">{visibleAccounts.map((account, index) => <AccountCard key={account.id} account={account} featured={view === "active" && index === 0} />)}</div> : <EmptyState description={view === "archived" ? "Las cuentas que archives aparecerán aquí con todo su historial." : "No hay cuentas activas."} title={view === "archived" ? "Sin cuentas archivadas" : "Sin cuentas activas"} />}
             </section>
 
             <section className="space-y-4">

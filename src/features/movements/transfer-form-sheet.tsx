@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
 import { FormField } from "@/components/form-field";
-import { Sheet, SheetFooter } from "@/components/sheet";
+import { MoneyValue } from "@/components/money-value";
+import { ResponsiveDialog } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -34,6 +35,13 @@ export function TransferFormSheet({ accounts, defaultFromAccountId, onOpenChange
   const source = activeAccounts.find((account) => account.id === fromId);
   const destinations = activeAccounts.filter((account) => account.id !== fromId && account.currency === source?.currency);
   const destinationId = form.watch("to_account_id");
+  const destination = destinations.find((account) => account.id === destinationId);
+  let previewAmount = 0n;
+  try {
+    previewAmount = parseMoneyInput(form.watch("amount") || "0");
+  } catch {
+    previewAmount = 0n;
+  }
 
   useEffect(() => {
     if (destinations.length && !destinations.some((account) => account.id === destinationId)) {
@@ -69,11 +77,11 @@ export function TransferFormSheet({ accounts, defaultFromAccountId, onOpenChange
   }
 
   return (
-    <Sheet description="Mueve dinero entre cuentas de la misma moneda. No se registrará como ingreso ni gasto." onOpenChange={onOpenChange} open={open} title="Transferir">
-      <form onSubmit={(event) => void form.handleSubmit(handleSubmit)(event)}>
+    <ResponsiveDialog description="Mueve dinero entre cuentas de la misma moneda. No se registrará como ingreso ni gasto." footer={<><Button onClick={() => onOpenChange(false)} type="button" variant="ghost">Cancelar</Button><Button disabled={transfer.isPending || destinations.length === 0} form="transfer-form" type="submit">{transfer.isPending ? "Transfiriendo…" : "Confirmar transferencia"}</Button></>} onOpenChange={onOpenChange} open={open} size="medium" title="Transferir">
+      <form id="transfer-form" onSubmit={(event) => void form.handleSubmit(handleSubmit)(event)}>
         <div className="space-y-6">
           <FormField error={form.formState.errors.amount?.message} id="transfer-amount" label="¿Cuánto?">
-            <div className="relative"><span className="absolute left-0 top-1/2 -translate-y-1/2 text-3xl text-muted-foreground">$</span><Input autoFocus className="h-20 rounded-none border-x-0 border-t-0 bg-transparent pl-7 text-4xl font-semibold tabular-nums focus-visible:ring-0" id="transfer-amount" inputMode="decimal" placeholder="0.00" {...form.register("amount")} /></div>
+            <div className="relative"><span className="absolute left-0 top-1/2 -translate-y-1/2 text-3xl text-muted-foreground">$</span><Input autoFocus className="h-24 rounded-none border-x-0 border-t-0 bg-transparent pl-7 text-5xl font-semibold tracking-[-0.04em] tabular-nums shadow-none focus-visible:ring-0" id="transfer-amount" inputMode="decimal" placeholder="0.00" {...form.register("amount")} /></div>
           </FormField>
           <div className="relative space-y-3 before:absolute before:bottom-11 before:left-5 before:top-11 before:w-px before:bg-border">
             <FormField error={form.formState.errors.from_account_id?.message} id="transfer-from" label="Desde">
@@ -90,10 +98,14 @@ export function TransferFormSheet({ accounts, defaultFromAccountId, onOpenChange
           <FormField error={form.formState.errors.occurred_on?.message} id="transfer-date" label="Fecha"><Input id="transfer-date" type="date" {...form.register("occurred_on")} /></FormField>
           <FormField error={form.formState.errors.description?.message} id="transfer-description" label="Descripción"><Input id="transfer-description" {...form.register("description")} /></FormField>
           <FormField error={form.formState.errors.notes?.message} id="transfer-notes" label="Notas (opcional)"><textarea className="min-h-24 w-full resize-none rounded-xl border border-border bg-surface px-3.5 py-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20" id="transfer-notes" {...form.register("notes")} /></FormField>
+          {source && destination && previewAmount > 0n ? <div className="rounded-2xl border border-border/70 bg-surface-secondary p-4" aria-label="Resumen de transferencia">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Resumen</p>
+            <div className="flex items-center justify-between gap-4 text-sm"><span>{source.name}</span><MoneyValue amount={-previewAmount} currency={source.currency} sign="always" size="sm" /></div>
+            <div className="mt-2 flex items-center justify-between gap-4 text-sm"><span>{destination.name}</span><MoneyValue amount={previewAmount} currency={destination.currency} sign="always" size="sm" /></div>
+          </div> : null}
           {form.formState.errors.root ? <p className="text-sm text-danger" role="alert">{form.formState.errors.root.message}</p> : null}
         </div>
-        <SheetFooter><Button className="flex-1" disabled={transfer.isPending || destinations.length === 0} type="submit">{transfer.isPending ? "Transfiriendo…" : "Transferir ahora"}</Button></SheetFooter>
       </form>
-    </Sheet>
+    </ResponsiveDialog>
   );
 }

@@ -19,7 +19,7 @@ export function ActionMenu({ items, label = "Más acciones" }: { items: ActionMe
         <Button aria-label={label} size="icon" variant="ghost"><MoreHorizontal className="size-5" /></Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content align="end" className="z-50 min-w-48 rounded-xl border border-border bg-surface p-1.5 shadow-card">
+        <DropdownMenu.Content align="end" className="z-50 min-w-48 rounded-xl border border-border bg-surface-elevated p-1.5 shadow-float">
           {items.map((item) => (
             <DropdownMenu.Item
               key={item.label}

@@ -36,13 +36,13 @@ export function OnboardingPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-10">
-      <Card className="w-full max-w-xl">
-        <div className="mb-6 flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+    <main className="grid min-h-screen place-items-center bg-background px-4 py-10 sm:px-6">
+      <Card className="w-full max-w-2xl p-6 sm:p-10">
+        <div className="mb-6 flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
           <Sparkles aria-hidden="true" className="size-5" />
         </div>
         <p className="text-sm font-semibold text-primary">Bienvenido a Nexo</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Empecemos por lo esencial</h1>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Empecemos por lo esencial</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Solo necesitamos tu nombre, moneda base y zona horaria. Las cuentas y tarjetas llegarán en sus fases correspondientes.</p>
         <div className="mt-8">
           <ProfileForm currencies={currencies.data ?? []} isPending={updateProfile.isPending} onSubmit={handleSubmit} profile={profile.data} submitLabel="Entrar a Nexo" />

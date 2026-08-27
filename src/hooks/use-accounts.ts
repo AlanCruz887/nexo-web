@@ -10,7 +10,7 @@ export const accountsQueryKey = ["accounts"] as const;
 export const accountQueryKey = (accountId: string) => ["account", accountId] as const;
 
 export function useAccounts() {
-  return useQuery({ queryKey: accountsQueryKey, queryFn: accountService.list });
+  return useQuery({ queryKey: accountsQueryKey, queryFn: accountService.list, staleTime: 45_000 });
 }
 
 export function useAccount(accountId: string | undefined) {
@@ -59,6 +59,14 @@ export function useArchiveAccount() {
   const invalidate = useInvalidateAccounts();
   return useMutation({
     mutationFn: (accountId: string) => accountService.archive(accountId, createIdempotencyKey("account:archive")),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRestoreAccount() {
+  const invalidate = useInvalidateAccounts();
+  return useMutation({
+    mutationFn: (accountId: string) => accountService.restore(accountId, createIdempotencyKey("account:restore")),
     onSuccess: invalidate,
   });
 }

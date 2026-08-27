@@ -1,34 +1,44 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 
+import { StartupSplash } from "@/components/skeletons";
 import { AppShell } from "@/layouts/app-shell";
 import { ProtectedRoute, PublicOnlyRoute } from "@/routes/route-guards";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <Navigate replace to="/inicio" /> },
   {
-    element: <PublicOnlyRoute />,
+    element: <Outlet />,
+    hydrateFallbackElement: <StartupSplash />,
     children: [
-      { path: "/login", lazy: async () => ({ Component: (await import("@/features/auth/login-page")).LoginPage }) },
-      { path: "/registro", lazy: async () => ({ Component: (await import("@/features/auth/register-page")).RegisterPage }) },
-      { path: "/recuperar-contrasena", lazy: async () => ({ Component: (await import("@/features/auth/recover-password-page")).RecoverPasswordPage }) },
-    ],
-  },
-  { path: "/actualizar-contrasena", lazy: async () => ({ Component: (await import("@/features/auth/update-password-page")).UpdatePasswordPage }) },
-  {
-    element: <ProtectedRoute />,
-    children: [
-      { path: "/onboarding", lazy: async () => ({ Component: (await import("@/features/onboarding/onboarding-page")).OnboardingPage }) },
+      { path: "/", element: <Navigate replace to="/inicio" /> },
       {
-        element: <AppShell />,
+        element: <PublicOnlyRoute />,
         children: [
-          { path: "/inicio", lazy: async () => ({ Component: (await import("@/features/home/home-page")).HomePage }) },
-          { path: "/cuentas", lazy: async () => ({ Component: (await import("@/features/accounts/accounts-page")).AccountsPage }) },
-          { path: "/cuentas/:id", lazy: async () => ({ Component: (await import("@/features/accounts/account-detail-page")).AccountDetailPage }) },
-          { path: "/movimientos", lazy: async () => ({ Component: (await import("@/features/movements/movements-page")).MovementsPage }) },
-          { path: "/configuracion", lazy: async () => ({ Component: (await import("@/features/settings/settings-page")).SettingsPage }) },
+          { path: "/login", lazy: async () => ({ Component: (await import("@/features/auth/login-page")).LoginPage }) },
+          { path: "/registro", lazy: async () => ({ Component: (await import("@/features/auth/register-page")).RegisterPage }) },
+          { path: "/recuperar-contrasena", lazy: async () => ({ Component: (await import("@/features/auth/recover-password-page")).RecoverPasswordPage }) },
         ],
       },
+      { path: "/actualizar-contrasena", lazy: async () => ({ Component: (await import("@/features/auth/update-password-page")).UpdatePasswordPage }) },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          { path: "/onboarding", lazy: async () => ({ Component: (await import("@/features/onboarding/onboarding-page")).OnboardingPage }) },
+          {
+            element: <AppShell />,
+            children: [
+              { path: "/inicio", lazy: async () => ({ Component: (await import("@/features/home/home-page")).HomePage }) },
+              { path: "/cuentas", lazy: async () => ({ Component: (await import("@/features/accounts/accounts-page")).AccountsPage }) },
+              { path: "/cuentas/:id", lazy: async () => ({ Component: (await import("@/features/accounts/account-detail-page")).AccountDetailPage }) },
+              { path: "/movimientos", lazy: async () => ({ Component: (await import("@/features/movements/movements-page")).MovementsPage }) },
+              { path: "/accounts", lazy: async () => ({ Component: (await import("@/features/accounts/accounts-page")).AccountsPage }) },
+              { path: "/accounts/:id", lazy: async () => ({ Component: (await import("@/features/accounts/account-detail-page")).AccountDetailPage }) },
+              { path: "/transactions", lazy: async () => ({ Component: (await import("@/features/movements/movements-page")).MovementsPage }) },
+              { path: "/configuracion", lazy: async () => ({ Component: (await import("@/features/settings/settings-page")).SettingsPage }) },
+            ],
+          },
+        ],
+      },
+      { path: "*", lazy: async () => ({ Component: (await import("@/routes/not-found-page")).NotFoundPage }) },
     ],
   },
-  { path: "*", lazy: async () => ({ Component: (await import("@/routes/not-found-page")).NotFoundPage }) },
 ]);

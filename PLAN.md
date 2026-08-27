@@ -56,7 +56,7 @@ Objetivo cumplido: introducir activos líquidos y actividad base sobre el núcle
 
 Alcance implementado:
 
-- cuentas `checking`, `savings`, `cash`, `debit`, `investment` y `other`, con moneda y archivado;
+- cuentas `checking`, `savings`, `cash`, `debit`, `investment` y `other`, con moneda, archivado y restauración;
 - categorías mínimas de sistema;
 - eventos financieros y entradas de cuenta inmutables;
 - saldo derivado desde entradas, sin `current_balance` editable;
@@ -65,7 +65,9 @@ Alcance implementado:
 - edición por reversión más reemplazo y eliminación/reversión compensatoria;
 - idempotencia transaccional, auditoría y notas versionadas;
 - RLS A/B, vistas `security_invoker` y queries sin N+1;
-- rutas `/cuentas`, `/cuentas/:id` y `/movimientos` con UI premium responsive.
+- rutas canónicas `/cuentas`, `/cuentas/:id` y `/movimientos`, más alias `/accounts`, `/accounts/:id` y `/transactions`, con UI premium responsive;
+- detalle con fecha de creación, duplicación a borrador fechado hoy y confirmaciones que identifican movimiento e importe;
+- resumen de transferencia origen/destino antes de confirmar.
 
 Verificación cumplida:
 
@@ -75,6 +77,8 @@ Verificación cumplida:
 - reversión restaura ambas cuentas;
 - usuario A no lee ni opera recursos del usuario B;
 - una cuenta archivada sale de selectores y conserva historial;
+- restaurar es idempotente, auditable y vuelve a habilitar actividad sin alterar saldo ni historia;
+- eliminar un movimiento simple registra `transaction_deleted`, pero internamente conserva el evento y lo compensa;
 - frontend, migraciones limpias y suite RLS/PostgreSQL pasan.
 
 ### Fase 3 — Personas, compras compartidas y receivables

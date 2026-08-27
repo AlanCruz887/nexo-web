@@ -208,6 +208,7 @@ export type Database = {
         Returns: string;
       };
       archive_account: { Args: { p_account_id: string; p_idempotency_key: string }; Returns: string };
+      restore_account: { Args: { p_account_id: string; p_idempotency_key: string }; Returns: string };
       create_transaction: {
         Args: {
           p_account_id: string;

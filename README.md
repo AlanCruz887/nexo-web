@@ -19,7 +19,7 @@ Implementado:
 - shell responsive, configuración y privacidad `hide_money`;
 - frontera monetaria exacta PostgreSQL `bigint` ↔ API `string` ↔ TypeScript `bigint`;
 - pruebas frontend y pruebas RLS contra PostgreSQL local efímero.
-- cuentas en MXN, USD o EUR, con archivado e historial preservado;
+- cuentas en MXN, USD o EUR, con archivado, restauración e historial preservado;
 - saldos reconstruidos desde eventos y entradas inmutables;
 - ingresos, gastos personales y ajustes simples;
 - transferencias atómicas, de dos entradas y sin efecto en ingreso/gasto;
@@ -74,6 +74,8 @@ Rutas implementadas:
 - `/cuentas`
 - `/cuentas/:id`
 - `/movimientos`
+- `/accounts` y `/accounts/:id` (alias compatibles)
+- `/transactions` (alias compatible)
 - `/configuracion`
 
 ## Base de datos
@@ -88,7 +90,7 @@ Las migraciones productivas están en `supabase/migrations/` y crean:
 - `public.financial_events` y `public.account_entries` inmutables;
 - `public.financial_commands`, `public.audit_events` y notas versionadas;
 - vistas `security_invoker` para saldos y actividad;
-- RPC tipados para cuentas, movimientos, transferencias, edición y reversión.
+- RPC tipados para cuentas, restauración, movimientos, transferencias, edición y reversión.
 
 Para aplicar el stack completo cuando Docker esté disponible:
 
@@ -97,7 +99,7 @@ npm exec supabase start
 npm exec supabase db reset
 ```
 
-La prueba local incluida no necesita Docker. Crea PostgreSQL en un directorio temporal, reconstruye todas las migraciones y valida aislamiento A/B, saldos, transferencias, reversión e idempotencia:
+La prueba local incluida no necesita Docker. Crea PostgreSQL en un directorio temporal, reconstruye todas las migraciones y valida aislamiento A/B, saldos, archivado/restauración, transferencias, reversión, auditoría e idempotencia:
 
 ```bash
 npm run test:db

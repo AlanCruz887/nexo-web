@@ -9,7 +9,7 @@ export function PageTransition({ children }: PropsWithChildren) {
     <motion.div
       initial={reduceMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reduceMotion ? 0 : motionTokens.duration.normal, ease: motionTokens.ease }}
+      transition={{ duration: reduceMotion ? 0 : motionTokens.duration.normal, ease: motionTokens.ease.enter }}
     >
       {children}
     </motion.div>

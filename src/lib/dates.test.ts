@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatFinancialDate,
+  formatAuditTimestamp,
   isValidTimezone,
   parseAuditTimestamp,
   parseFinancialDate,
@@ -16,6 +17,7 @@ describe("date boundaries", () => {
 
   it("requires time for audit timestamps", () => {
     expect(parseAuditTimestamp("2026-08-27T12:30:00Z")).toBeInstanceOf(Date);
+    expect(formatAuditTimestamp("2026-08-27T12:30:00Z", "yyyy-MM-dd HH:mm")).toMatch(/^2026-08-27 /);
     expect(() => parseAuditTimestamp("2026-08-27")).toThrow();
   });
 

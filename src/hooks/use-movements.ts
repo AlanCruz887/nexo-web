@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { createIdempotencyKey } from "@/lib/idempotency";
 import { parseMoneyInput, serializeMoneyMinor } from "@/lib/money";
@@ -14,7 +14,7 @@ export function useCategories() {
 }
 
 export function useMovements(filters: MovementFilters = {}) {
-  return useQuery({ queryKey: transactionsQueryKey(filters), queryFn: () => movementService.list(filters) });
+  return useQuery({ queryKey: transactionsQueryKey(filters), queryFn: () => movementService.list(filters), placeholderData: keepPreviousData });
 }
 
 export function useAccountMovements(accountId: string | undefined, filters: MovementFilters = {}) {
@@ -23,6 +23,7 @@ export function useAccountMovements(accountId: string | undefined, filters: Move
     queryKey: accountTransactionsQueryKey(accountId ?? "missing", filters),
     queryFn: () => movementService.list(scopedFilters),
     enabled: Boolean(accountId),
+    placeholderData: keepPreviousData,
   });
 }
 

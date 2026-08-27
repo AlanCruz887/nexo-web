@@ -30,14 +30,14 @@ export function ToastProvider({ children }: PropsWithChildren) {
             <motion.div
               key={item.id}
               animate={{ opacity: 1, y: 0 }}
-              className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border border-border bg-foreground px-4 py-3 text-sm text-background shadow-card"
+              className="pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-foreground shadow-float"
               exit={{ opacity: 0, y: 8 }}
               initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-              transition={{ duration: reduceMotion ? 0 : motionTokens.duration.normal, ease: motionTokens.ease }}
+              transition={{ duration: reduceMotion ? 0 : motionTokens.duration.normal, ease: motionTokens.ease.enter }}
             >
               {item.tone === "success" ? <CheckCircle2 className="size-5 text-success" /> : <AlertCircle className="size-5 text-danger" />}
               <span className="flex-1 font-medium">{item.message}</span>
-              <Button aria-label="Cerrar aviso" className="text-background hover:bg-background/10 hover:text-background" onClick={() => remove(item.id)} size="icon" variant="ghost"><X className="size-4" /></Button>
+              <Button aria-label="Cerrar aviso" onClick={() => remove(item.id)} size="icon" variant="ghost"><X className="size-4" /></Button>
             </motion.div>
           ))}
         </AnimatePresence>

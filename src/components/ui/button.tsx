@@ -5,13 +5,13 @@ import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
 const buttonVariants = cva(
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-[background,color,border,box-shadow,transform] duration-normal ease-nexo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:translate-y-px",
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-[background,color,border,box-shadow,transform] duration-fast ease-nexo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[.98]",
   {
     variants: {
       variant: {
-        primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
-        secondary: "border border-border bg-surface text-foreground hover:bg-muted",
-        ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
+        primary: "bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover",
+        secondary: "border border-border bg-surface text-foreground shadow-sm hover:border-primary/20 hover:bg-primary-soft hover:text-primary-strong",
+        ghost: "text-muted-foreground hover:bg-surface-secondary hover:text-foreground",
         danger: "bg-danger text-white hover:bg-danger/90",
       },
       size: {
