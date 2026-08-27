@@ -15,7 +15,7 @@ Implementado:
 - Supabase Auth: registro, login, logout y recuperación de contraseña;
 - rutas protegidas y onboarding fundamental;
 - `profiles` 1:1 con `auth.users` y catálogo `currencies`;
-- RLS y grants mínimos explícitos;
+- RLS, grants mínimos explícitos y validación IANA de zona horaria;
 - shell responsive, configuración y privacidad `hide_money`;
 - frontera monetaria exacta PostgreSQL `bigint` ↔ API `string` ↔ TypeScript `bigint`;
 - pruebas frontend y pruebas RLS contra PostgreSQL local efímero.

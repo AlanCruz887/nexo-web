@@ -49,6 +49,23 @@ for select
 to anon, authenticated
 using (true);
 
+create function private.is_valid_timezone(candidate text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from pg_catalog.pg_timezone_names
+    where name = candidate
+  )
+$$;
+
+revoke all on function private.is_valid_timezone(text) from public, anon, authenticated;
+grant execute on function private.is_valid_timezone(text) to authenticated, service_role;
+
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text not null default '',
@@ -58,7 +75,8 @@ create table public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_full_name_length check (char_length(full_name) <= 120),
-  constraint profiles_timezone_length check (char_length(btrim(timezone)) between 1 and 100)
+  constraint profiles_timezone_length check (char_length(btrim(timezone)) between 1 and 100),
+  constraint profiles_timezone_is_iana check (private.is_valid_timezone(timezone))
 );
 
 comment on table public.profiles is

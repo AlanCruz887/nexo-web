@@ -58,6 +58,15 @@ begin
   if updated_profiles <> 0 then
     raise exception 'RLS allowed user A to update user B';
   end if;
+
+  begin
+    update public.profiles
+    set timezone = 'Mars/Invalid'
+    where id = '11111111-1111-1111-1111-111111111111';
+    raise exception 'invalid timezone unexpectedly accepted';
+  exception
+    when check_violation then null;
+  end;
 end;
 $$;
 
