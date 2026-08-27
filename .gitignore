@@ -1,0 +1,25 @@
+# Dependencies and builds
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment files (keep the documented template)
+.env
+.env.*
+!.env.example
+
+# Supabase local state
+.supabase/
+supabase/.branches/
+supabase/.temp/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
