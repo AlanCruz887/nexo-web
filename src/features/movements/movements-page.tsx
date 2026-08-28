@@ -77,7 +77,7 @@ export function MovementsPage() {
       </div>
       <MovementFormSheet accounts={accounts.data ?? []} defaultAccountId={initialAccount} defaultKind={movementKind} onOpenChange={setMovementOpen} open={movementOpen} />
       <TransferFormSheet accounts={accounts.data ?? []} defaultFromAccountId={initialAccount} onOpenChange={setTransferOpen} open={transferOpen} />
-      <MovementDetailSheet accounts={accounts.data ?? []} eventId={selectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
+      <MovementDetailSheet accounts={accounts.data ?? []} eventId={selectedEventId} onEventIdChange={setSelectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
     </PageTransition>
   );
 }

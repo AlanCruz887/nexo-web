@@ -63,7 +63,7 @@ export function HomePage() {
     </div>
   </div>
   <AccountFormSheet baseCurrency={baseCurrency} onOpenChange={setAccountFormOpen} open={accountFormOpen} />
-  <MovementDetailSheet accounts={accounts.data ?? []} eventId={selectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
+  <MovementDetailSheet accounts={accounts.data ?? []} eventId={selectedEventId} onEventIdChange={setSelectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
   </PageTransition>;
 }
 

@@ -75,7 +75,7 @@ export function AccountsPage() {
       </div>
       <AccountFormSheet baseCurrency={profile.data?.base_currency ?? "MXN"} onOpenChange={setAccountFormOpen} open={accountFormOpen} />
       <TransferFormSheet accounts={activeAccounts} onOpenChange={setTransferOpen} open={transferOpen} />
-      <MovementDetailSheet accounts={allAccounts} eventId={selectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
+      <MovementDetailSheet accounts={allAccounts} eventId={selectedEventId} onEventIdChange={setSelectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
     </PageTransition>
   );
 }

@@ -22,6 +22,7 @@ export function MovementFormSheet({
   defaultKind = "expense",
   existing,
   prefill,
+  onUpdated,
   onOpenChange,
   open,
 }: {
@@ -30,6 +31,7 @@ export function MovementFormSheet({
   defaultKind?: Exclude<TransactionKind, "adjustment">;
   existing?: AccountActivity | undefined;
   prefill?: AccountActivity | undefined;
+  onUpdated?: ((eventId: string) => void) | undefined;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }) {
@@ -72,7 +74,8 @@ export function MovementFormSheet({
         return;
       }
       if (existing) {
-        await updateMovement.mutateAsync(input);
+        const updatedEventId = await updateMovement.mutateAsync(input);
+        onUpdated?.(updatedEventId);
         toast.success("Movimiento actualizado");
       } else {
         await createMovement.mutateAsync(input);

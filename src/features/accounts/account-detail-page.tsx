@@ -85,7 +85,7 @@ export function AccountDetailPage() {
       <MovementFormSheet accounts={allAccounts} defaultAccountId={current.id} defaultKind={movementKind} onOpenChange={setMovementOpen} open={movementOpen} />
       <TransferFormSheet accounts={allAccounts} defaultFromAccountId={current.id} onOpenChange={setTransferOpen} open={transferOpen} />
       <AccountFormSheet account={current} baseCurrency={current.currency} onOpenChange={setEditOpen} open={editOpen} />
-      <MovementDetailSheet accounts={allAccounts} eventId={selectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
+      <MovementDetailSheet accounts={allAccounts} eventId={selectedEventId} onEventIdChange={setSelectedEventId} onOpenChange={(open) => { if (!open) setSelectedEventId(undefined); }} open={Boolean(selectedEventId)} />
       <ConfirmDialog confirmLabel="Archivar cuenta" description="Dejará de aparecer en movimientos nuevos, pero conservará su saldo y todo su historial." isPending={archive.isPending} onConfirm={() => void handleArchive()} onOpenChange={setArchiveOpen} open={archiveOpen} title="¿Archivar esta cuenta?" />
     </div>
   );

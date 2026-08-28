@@ -18,6 +18,9 @@ declare
   transfer_event uuid;
   repeated_transfer_event uuid;
   updated_expense_event uuid;
+  regression_event uuid;
+  regression_updated_event uuid;
+  balance_before_edit bigint;
   source_balance bigint;
   destination_balance bigint;
   income_total bigint;
@@ -139,6 +142,44 @@ begin
   from public.account_balances where id = destination_account;
   if source_balance <> 1500000 or destination_balance <> 0 then
     raise exception 'transfer reversal did not restore both accounts';
+  end if;
+
+  select balance_minor into balance_before_edit
+  from public.account_balances where id = source_account;
+  regression_event := public.create_transaction(
+    source_account, 'expense', 150000, 'Compra original', 'food', current_date, null, 'phase2-regression-create'
+  );
+  regression_updated_event := public.update_transaction(
+    regression_event, 120000, 'Compra editada', 'transport', current_date - 1, 'Metadata editada', 'phase2-regression-update'
+  );
+  if regression_updated_event = regression_event then
+    raise exception 'transaction update did not return the replacement event id';
+  end if;
+  if exists (select 1 from public.account_activity where event_id = regression_event) then
+    raise exception 'replaced event remained in current activity';
+  end if;
+  if not exists (
+    select 1 from public.account_activity
+    where event_id = regression_updated_event
+      and amount_minor = 120000
+      and personal_amount_minor = 120000
+      and description = 'Compra editada'
+      and category_id = 'transport'
+      and occurred_on = current_date - 1
+      and notes = 'Metadata editada'
+  ) then
+    raise exception 'replacement event detail did not resolve with edited amount and metadata';
+  end if;
+  select balance_minor into source_balance
+  from public.account_balances where id = source_account;
+  if source_balance <> balance_before_edit - 120000 then
+    raise exception '1500 to 1200 edit did not apply exactly once: before %, after %', balance_before_edit, source_balance;
+  end if;
+  perform public.reverse_transaction(regression_updated_event, 'phase2-regression-cleanup');
+  select balance_minor into source_balance
+  from public.account_balances where id = source_account;
+  if source_balance <> balance_before_edit then
+    raise exception 'regression edit cleanup did not restore balance';
   end if;
 
   perform public.archive_account(source_account, 'phase2-archive-source-a');

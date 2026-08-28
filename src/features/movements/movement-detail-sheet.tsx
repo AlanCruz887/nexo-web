@@ -14,7 +14,7 @@ import { formatMoney } from "@/lib/money";
 import type { AccountActivity, AccountBalance } from "@/types/database";
 import { MovementFormSheet } from "@/features/movements/movement-form-sheet";
 
-export function MovementDetailSheet({ accounts, eventId, onOpenChange, open }: { accounts: AccountBalance[]; eventId?: string | undefined; onOpenChange: (open: boolean) => void; open: boolean }) {
+export function MovementDetailSheet({ accounts, eventId, onEventIdChange, onOpenChange, open }: { accounts: AccountBalance[]; eventId?: string | undefined; onEventIdChange?: ((eventId: string) => void) | undefined; onOpenChange: (open: boolean) => void; open: boolean }) {
   const movement = useMovement(eventId);
   const reverse = useReverseMovement();
   const toast = useToast();
@@ -73,7 +73,7 @@ export function MovementDetailSheet({ accounts, eventId, onOpenChange, open }: {
           </div>
         ) : <ErrorState message="No encontramos este movimiento." />}
       </Sheet>
-      {primary && !isTransfer && !isOpening ? <MovementFormSheet accounts={accounts} existing={primary} onOpenChange={setEditOpen} open={editOpen} /> : null}
+      {primary && !isTransfer && !isOpening ? <MovementFormSheet accounts={accounts} existing={primary} onOpenChange={setEditOpen} onUpdated={onEventIdChange} open={editOpen} /> : null}
       {primary && !isTransfer && !isOpening ? <MovementFormSheet accounts={accounts} onOpenChange={setDuplicateOpen} open={duplicateOpen} prefill={primary} /> : null}
       {primary && isTransfer ? <TransferNotesSheet event={primary} onOpenChange={setEditOpen} open={editOpen} /> : null}
       <ConfirmDialog

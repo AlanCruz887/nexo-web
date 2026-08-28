@@ -56,7 +56,7 @@ export const movementService = {
     return data;
   },
 
-  async update(eventId: string, input: MovementFormInput, amountMinor: string, idempotencyKey: string) {
+  async update(eventId: string, input: MovementFormInput, amountMinor: string, idempotencyKey: string): Promise<string> {
     const { data, error } = await supabase.rpc("update_transaction", {
       p_event_id: eventId,
       p_amount_minor: amountMinor,
@@ -67,6 +67,7 @@ export const movementService = {
       p_idempotency_key: idempotencyKey,
     });
     if (error) throw error;
+    if (!data) throw new Error("NEXO_UPDATE_RESPONSE_INVALID");
     return data;
   },
 
