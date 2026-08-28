@@ -204,9 +204,11 @@ Las proyecciones son contratos de lectura compartidos por UI, exportaciones y re
 | Métrica | Fuente de verdad única |
 |---|---|
 | Saldo de cuenta | `sum(account_entries.amount_minor)`; el opening se materializa una sola vez como entrada |
-| Saldo utilizado de tarjeta | baseline + entradas de tarjeta impacting: cargos, principal completo de MSI nuevo, remaining principal histórico no incluido, pagos y reembolsos |
-| Pago actual | `remaining_due` del último `card_statement` cerrado aplicable, actualizado solo mediante asignaciones de pago/reversión |
-| Acumulado del ciclo | items elegibles por `transaction_date` dentro del `card_cycle` abierto; no es pago requerido |
+| Saldo utilizado de tarjeta | `card_summaries.used_balance_minor`: baseline + suma firmada de `card_entries` con `effect_scope = impacting` |
+| Pago actual | `card_summaries.current_payment_minor`: `remaining_due_minor` del último `card_statement` cerrado aplicable |
+| Acumulado del ciclo | `card_current_cycles.open_cycle_accumulated_minor`: cargos/refunds/ajustes con `cycle_start <= transaction_date < statement_date`; excluye pagos y no es pago requerido |
+| Disponible de tarjeta | `card_summaries.available_credit_minor`: límite menos saldo utilizado, sin FX |
+| Fecha límite | `card_due_date(statement_date, payment_days_after_statement)`; usa días calendario y cruza mes/año |
 | Gasto personal | Fase 2: suma de `financial_events.personal_amount_minor` para gastos vigentes; cuando existan compras distribuidas, la proyección compartida sumará sus asignaciones personales sin cambiar el contrato |
 | Ingreso | suma de `financial_events.amount_minor` para eventos `income` vigentes; transferencias, reembolsos, ajustes y cobros futuros nunca entran aquí |
 | Cash flow | entradas y salidas firmadas de `account_entries` por `occurred_on`; se presentan por moneda y la clasificación del evento mantiene transferencias separadas de ingreso/gasto |
@@ -216,7 +218,7 @@ Las proyecciones son contratos de lectura compartidos por UI, exportaciones y re
 | Patrimonio | por moneda: saldos de activos + receivables nominales - pasivos de tarjeta - saldos a favor/otros pasivos |
 | Presupuesto consumido | `personal_amount` vigente por categoría y periodo |
 
-Proyecciones implementadas: `account_balances` y `account_activity`, ambas vistas `security_invoker`; esta última excluye eventos revertidos y entrega el importe personal y la clasificación que consumen las métricas de Fase 2. Proyecciones futuras: `card_used_balances`, `card_current_payment`, `card_cycle_accumulated`, `receivable_balances`, `person_current_due`, `person_credit_balances`, `personal_expenses`, `cash_flow`, `budget_consumption`, `net_worth` y `card_comparison`.
+Proyecciones implementadas: `account_balances`, `account_activity`, `card_summaries` y `card_current_cycles`, todas `security_invoker`. `card_summaries` es el contrato único de saldo utilizado, disponible y pago actual; `card_current_cycles` define el periodo abierto y su acumulado. Proyecciones futuras: `receivable_balances`, `person_current_due`, `person_credit_balances`, `personal_expenses`, `cash_flow`, `budget_consumption`, `net_worth` y `card_comparison`.
 
 Cada proyección devuelve IDs de desglose o cuenta con una consulta complementaria que explica sus componentes. Los totales no son columnas editables. Cualquier caché se invalida por las claves del agregado afectado después de que la RPC confirme.
 
@@ -366,7 +368,7 @@ Riesgos/decisiones que siguen abiertos para fases posteriores y no bloquean el e
 - Conciliación e importación dependen de idempotencia, eventos y explicación de saldos.
 - Exportación depende de consultas estables y privacidad; no debe definir una segunda lógica de cálculo.
 
-## 16. Estado de implementación después de Fase 2
+## 16. Estado de implementación después de Fase 3A
 
 Implementado:
 
@@ -382,6 +384,9 @@ Implementado:
 - migración de `currencies` y `profiles`, trigger 1:1, RLS y grants explícitos;
 - pruebas frontend y reconstrucción/pruebas RLS sobre PostgreSQL 17 efímero.
 - tablas `accounts`, `categories`, `financial_events`, `account_entries`, `financial_commands`, `audit_events` y `financial_event_notes`;
+- tablas `credit_cards`, `card_baselines`, `card_entries` y `card_statements`;
+- funciones puras de ciclo en PostgreSQL y cierre de statement atómico/idempotente;
+- vistas `card_summaries` y `card_current_cycles`, wallet y detalle de tarjeta;
 - vistas `account_balances` y `account_activity` con RLS heredada mediante `security_invoker`;
 - RPC tipados para crear/editar/archivar/restaurar cuentas, registrar/editar/revertir movimientos y transferir/revertir;
 - rutas canónicas de cuentas, detalle y movimientos, con alias `/accounts`, `/accounts/:id` y `/transactions`, queries TanStack, filtros y contexto preseleccionado;
@@ -403,10 +408,10 @@ PostgreSQL bigint minor units
 
 No implementado y conservado únicamente como diseño futuro:
 
-- baselines, ciclos, statements y pagos de tarjeta;
+- compras productivas, pagos y reembolsos de tarjeta;
 - personas, receivables, saldos a favor y cobros;
 - installment plans/MSI;
 - presupuestos, recurrencias, planificación, patrimonio y reportes;
 - importación, conciliación, recibos y exportación.
 
-No existen implementaciones parciales de tarjetas, statements, MSI, personas, receivables, presupuestos, planificación, salud, conciliación ni reportes. La Fase 3 requiere autorización explícita.
+No existen implementaciones parciales de MSI, personas, receivables, presupuestos, planificación, salud, conciliación ni reportes. La Fase 3B requiere autorización explícita.

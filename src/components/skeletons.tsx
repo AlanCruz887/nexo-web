@@ -15,6 +15,18 @@ export function TransactionsSkeleton() {
   return <div className="space-y-10" role="status"><span className="sr-only">Cargando movimientos</span><HeaderSkeleton /><div className="flex gap-2 border-b border-border/60 pb-6">{[72, 88, 74, 108].map((width) => <Skeleton className="h-10 rounded-full" key={width} style={{ width }} />)}</div><div><Skeleton className="h-3 w-12" /><TransactionRows /></div></div>;
 }
 
+export function CardsSkeleton() {
+  return <div className="space-y-12" role="status"><span className="sr-only">Preparando tus tarjetas</span><HeaderSkeleton /><div className="border-b border-border/60 pb-9"><Skeleton className="h-3 w-32" /><Skeleton className="mt-5 h-16 w-[min(480px,85%)]" /></div><div><Skeleton className="h-6 w-32" /><div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((index) => <Skeleton className="h-56 rounded-[1.6rem]" delay={index * 50} key={index} />)}</div></div></div>;
+}
+
+export function CardDetailSkeleton() {
+  return <div className="space-y-10" role="status"><span className="sr-only">Preparando tarjeta</span><Skeleton className="h-10 w-24" /><div className="grid gap-8 border-b border-border/60 pb-10 lg:grid-cols-2"><div><Skeleton className="h-4 w-28" /><Skeleton className="mt-3 h-10 w-56" /><Skeleton className="mt-12 h-20 w-[min(480px,90%)]" /></div><Skeleton className="h-52 rounded-[1.6rem]" /></div><div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((index) => <Skeleton className="h-28" delay={index * 40} key={index} />)}</div><StatementsSkeleton /></div>;
+}
+
+export function StatementsSkeleton() {
+  return <div className="space-y-1" role="status"><span className="sr-only">Cargando estados de cuenta</span>{[0, 1, 2].map((index) => <div className="flex items-center justify-between border-b border-border py-5" key={index}><div><Skeleton className="h-4 w-36" delay={index * 40} /><Skeleton className="mt-2 h-3 w-52" delay={index * 40} /></div><Skeleton className="h-5 w-24" delay={index * 40} /></div>)}</div>;
+}
+
 export function SettingsSkeleton() {
   return <div className="max-w-4xl space-y-10" role="status"><span className="sr-only">Cargando configuración</span><HeaderSkeleton /><div className="divide-y divide-border/60 border-y border-border/60">{[0, 1, 2].map((index) => <div className="grid gap-6 py-8 md:grid-cols-[220px_1fr]" key={index}><div><Skeleton className="h-4 w-28" /><Skeleton className="mt-2 h-3 w-44" /></div><Skeleton className="h-24 w-full" delay={index * 40} /></div>)}</div></div>;
 }

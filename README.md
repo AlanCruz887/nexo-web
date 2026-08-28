@@ -1,10 +1,10 @@
 # Nexo
 
-Nexo es una aplicación financiera personal construida por fases. La Fase 2 agrega cuentas, movimientos simples y transferencias sobre el fundamento seguro de identidad, moneda y privacidad de la Fase 1.
+Nexo es una aplicación financiera personal construida por fases. La Fase 3A agrega tarjetas de crédito, baselines, ciclos y estados de cuenta sobre el ledger seguro de las fases anteriores.
 
 ## Estado
 
-**Fase 2 completada — Cuentas, movimientos base y transferencias.**
+**Fase 3A completada — Tarjetas de crédito, ciclos, baseline y estados de cuenta.**
 
 Implementado:
 
@@ -25,11 +25,16 @@ Implementado:
 - transferencias atómicas, de dos entradas y sin efecto en ingreso/gasto;
 - RPC financieros idempotentes y reversión auditable;
 - timeline de movimientos, filtros, drawers/bottom sheets y UI premium responsive.
+- tarjetas en MXN, USD o EUR con límite, corte, fecha límite derivada y themes desacoplados;
+- baselines `current_bank_balance`, `after_last_statement` y `specific_date`;
+- motor único de ciclos semiabiertos con ajuste de días 29–31;
+- saldo utilizado, disponible, pago actual y acumulado del ciclo como métricas independientes;
+- cierre manual e idempotente de statements, historial y restauración de tarjetas.
 
 Diseño futuro, no implementado:
 
-- tarjetas de crédito y statements;
-- statements, baseline y MSI;
+- compras completas de tarjeta, pagos desde cuentas y refunds operativos;
+- MSI;
 - personas y receivables;
 - presupuestos, planificación y reportes;
 - conciliación, importación y exportación.
@@ -74,6 +79,8 @@ Rutas implementadas:
 - `/cuentas`
 - `/cuentas/:id`
 - `/movimientos`
+- `/cards` y `/cards/:id`
+- `/tarjetas` y `/tarjetas/:id`
 - `/accounts` y `/accounts/:id` (alias compatibles)
 - `/transactions` (alias compatible)
 - `/configuracion`
@@ -91,6 +98,7 @@ Las migraciones productivas están en `supabase/migrations/` y crean:
 - `public.financial_commands`, `public.audit_events` y notas versionadas;
 - vistas `security_invoker` para saldos y actividad;
 - RPC tipados para cuentas, restauración, movimientos, transferencias, edición y reversión.
+- tablas, proyecciones y RPC para tarjetas, baselines, ciclos y statements.
 
 Para aplicar el stack completo cuando Docker esté disponible:
 
@@ -131,4 +139,4 @@ npm run build
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [PLAN.md](./PLAN.md)
 
-No debe comenzar la Fase 3 sin autorización explícita.
+No debe comenzar la Fase 3B sin autorización explícita.

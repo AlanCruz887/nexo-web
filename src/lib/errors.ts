@@ -17,6 +17,12 @@ const knownMessages: Record<string, string> = {
   NEXO_TRANSFER_CURRENCY_MISMATCH: "Las transferencias entre monedas distintas todavía no están disponibles.",
   NEXO_TRANSFER_SAME_ACCOUNT: "Elige una cuenta de destino diferente.",
   NEXO_TRANSACTION_ALREADY_REVERSED: "Este movimiento ya fue revertido.",
+  NEXO_CARD_NOT_FOUND: "No encontramos la tarjeta o no tienes acceso a ella.",
+  NEXO_CARD_ARCHIVED: "Esta tarjeta está archivada.",
+  NEXO_INVALID_BASELINE_AMOUNT: "Revisa el saldo del banco y el importe que quieres excluir.",
+  NEXO_STATEMENT_ALREADY_CLOSED: "Ese estado de cuenta ya fue cerrado.",
+  NEXO_INVALID_STATEMENT_DATE: "La fecha no corresponde a un corte válido de esta tarjeta.",
+  NEXO_STATEMENT_BEFORE_BASELINE: "No puedes cerrar un estado anterior al baseline de la tarjeta.",
 };
 
 export function toUserMessage(error: unknown): string {

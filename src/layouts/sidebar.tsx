@@ -1,4 +1,4 @@
-import { Home, Landmark, ReceiptText, Settings } from "lucide-react";
+import { CreditCard, Home, Landmark, ReceiptText, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
 
@@ -9,6 +9,7 @@ export const primaryNavigation = [
   { href: "/inicio", label: "Inicio", icon: Home },
   { href: "/movimientos", label: "Movimientos", icon: ReceiptText },
   { href: "/cuentas", label: "Cuentas", icon: Landmark },
+  { href: "/tarjetas", label: "Tarjetas", icon: CreditCard },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ] as const;
 
@@ -21,9 +22,9 @@ export function Sidebar() {
     <div className="px-2"><BrandMark /></div>
     <nav aria-label="Navegación principal" className="mt-9 space-y-6">
       <NavGroup label="General" items={primaryNavigation.slice(0, 2)} />
-      <NavGroup label="Dinero" items={primaryNavigation.slice(2, 3)} />
+      <NavGroup label="Dinero" items={primaryNavigation.slice(2, 4)} />
     </nav>
-    <div className="mt-auto"><NavGroup label="Más" items={primaryNavigation.slice(3)} /></div>
+    <div className="mt-auto"><NavGroup label="Más" items={primaryNavigation.slice(4)} /></div>
   </aside>;
 }
 

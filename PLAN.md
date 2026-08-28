@@ -4,7 +4,7 @@
 
 Cada fase termina con software verificable y documentación actualizada. No se inicia la siguiente si fallan invariantes financieras, aislamiento RLS o reconstrucción de saldos. Las fases agregan capacidades sobre el mismo núcleo; no crean modelos paralelos para cuentas, tarjetas, personas o reportes.
 
-Estado actual: **Fase 2 completada y verificada. Fase 3 no iniciada y requiere autorización explícita.**
+Estado actual: **Fase 3A completada y verificada. Fase 3B no iniciada y requiere autorización explícita.**
 
 ## 2. Secuencia recomendada
 
@@ -81,7 +81,21 @@ Verificación cumplida:
 - eliminar un movimiento simple registra `transaction_deleted`, pero internamente conserva el evento y lo compensa;
 - frontend, migraciones limpias y suite RLS/PostgreSQL pasan.
 
-### Fase 3 — Personas, compras compartidas y receivables
+### Fase 3A — Tarjetas, ciclos, baseline y statements — Completada
+
+Alcance implementado:
+
+- `credit_cards`, `card_baselines`, `card_entries` y `card_statements` con RLS y grants mínimos;
+- motor PostgreSQL único para corte efectivo, ciclo semiabierto, corte anterior y fecha límite;
+- baselines de saldo bancario actual, después del último estado y fecha específica;
+- proyecciones `card_summaries` y `card_current_cycles` con `security_invoker`;
+- cierre manual, atómico e idempotente; actualización auditada de importes reportados del statement;
+- wallet, detalle, historial y themes visuales sin reglas financieras;
+- tests de cortes 9/13/31, bisiesto, cambio de año, current payment/open cycle/used balance y RLS A/B.
+
+No incluye compras productivas de tarjeta, pagos desde cuentas, refunds, MSI, personas ni receivables.
+
+### Fase 3B — Personas, compras compartidas y receivables
 
 Objetivo: implementar la diferenciación que define a Nexo.
 
@@ -103,26 +117,20 @@ Verificación:
 - pago parcial conserva pendiente y sobrepago conserva `credit_balance` sin crear ingreso;
 - entidades archivadas conservan historial y salen de selectores.
 
-### Fase 4 — Tarjetas, baseline, ciclos y statements
+### Fase posterior — Compras y pagos de tarjeta — No iniciada
 
-Objetivo: modelar correctamente crédito y cortes sin confundirlos con cuentas.
+Objetivo: agregar operaciones productivas al motor de tarjeta ya implementado sin confundirlas con cuentas.
 
 Alcance:
 
-- tarjetas y onboarding con políticas de baseline;
 - cargos personales/terceros/compartidos en tarjeta;
-- generación y cierre de ciclos/statements;
-- fecha límite derivada;
 - pagos de tarjeta y asignación a statements;
-- saldo utilizado, pago actual y acumulado del ciclo;
 - desglose completo del saldo;
 - comparativa inicial de tarjetas.
 
 Reglas ya cerradas para esta fase:
 
-- cortes 29–31 usan el último día válido y mantienen límite superior exclusivo;
-- baseline enum: `current_bank_balance`, `after_last_statement`, `specific_date`;
-- statement cerrado controla pago actual; ciclo abierto solo muestra acumulado;
+- reutiliza el motor de ciclos, baseline y statements de Fase 3A;
 - pagos pre-baseline pueden guardarse como evidencia no-impacting.
 
 Verificación:
@@ -360,6 +368,6 @@ Estas pruebas se agregan en la primera fase donde exista la entidad necesaria y 
 21. el invariante `purchase_amount = personal_amount + third_party_allocations` se exige en compras y no se aplica indebidamente a otros tipos de evento;
 22. una compra MSI nueva impacta el principal de tarjeta una sola vez y sus cuotas no vuelven a sumar el mismo principal.
 
-## 9. Condición para iniciar Fase 3
+## 9. Condición para iniciar Fase 3B
 
-La Fase 3 empieza únicamente después de autorización expresa. Hasta entonces no se crean personas, receivables, compras compartidas ni modelos parciales de fases posteriores.
+La Fase 3B empieza únicamente después de autorización expresa. Hasta entonces no se crean personas, receivables, compras compartidas ni modelos parciales de fases posteriores.

@@ -351,3 +351,13 @@ La clave se identifica de forma única por `(user_id, idempotency_key)`. El regi
 - El modelo queda preparado para `purchase_date` y `posted_date`, ambas opcionales. No se inventa ninguna de ellas.
 - Una importación futura puede usar `posted_date` para asignar statement únicamente cuando el proveedor bancario la proporcione y declare que esa fecha gobierna el corte.
 - Cambiar la fecha que determina un statement requiere una regla versionada y una migración explícita de dominio; nunca cambia silenciosamente la semántica histórica.
+
+## 27. Implementación de tarjetas en Fase 3A
+
+- `card_baselines.baseline_balance_minor` es el punto inicial comparable. En `after_last_statement` equivale a saldo bancario reportado menos el statement excluido.
+- `card_entries.amount_minor` es firmado: cargos aumentan pasivo; pagos y refunds lo reducen. Solo `effect_scope = impacting` modifica saldo utilizado; `historical_non_impacting` conserva evidencia sin reaplicar saldo.
+- El ciclo abierto no se persiste como deuda requerida. `card_current_cycles` lo deriva con `cycle_start <= transaction_date < statement_date`.
+- Un statement cerrado captura el saldo utilizado al corte. Deuda anterior no pagada sigue dentro del ledger y, por tanto, se traslada al snapshot siguiente; cerrar no borra ni liquida deuda.
+- Estado persistido: `closed` mientras `remaining_due > 0`, `paid` cuando llega a cero. `open` está reservado por el contrato, pero el ciclo abierto actual es una proyección.
+- Sobrepago puede producir saldo utilizado negativo y disponible superior al límite. Fase 3A lo muestra sin inventar una clasificación; su aplicación operativa queda para la fase de pagos.
+- La automatización futura podrá invocar el mismo RPC idempotente de cierre. Fase 3A no incluye cron ni Edge Function.

@@ -289,8 +289,8 @@ Nexo cumple su contrato cuando:
 
 ## 7. Estado de implementación
 
-Las Fases 1 y 2 implementan el fundamento técnico, Auth, perfil, monedas, cuentas, movimientos simples, transferencias, reversión, auditoría e idempotencia. El saldo de cuenta y la actividad consumen proyecciones compartidas; la UI nunca edita un saldo calculado.
+Las Fases 1, 2 y 3A implementan el fundamento técnico, Auth, perfil, monedas, cuentas, movimientos simples, transferencias, tarjetas, baselines, ciclos y statements. Los saldos y métricas consumen proyecciones compartidas; la UI nunca edita un saldo calculado.
 
-Las rutas productivas actuales son `/inicio`, `/cuentas`, `/cuentas/:id`, `/movimientos` y `/configuracion`, además de Auth/onboarding. `/accounts`, `/accounts/:id` y `/transactions` son alias compatibles. Las cuentas pueden archivarse y restaurarse sin perder historia; los movimientos simples se editan mediante reversión más reemplazo, se duplican primero como borrador y las transferencias se revierten de forma atómica.
+Las rutas productivas actuales incluyen `/cards` y `/cards/:id` junto con sus alias `/tarjetas`, además de las rutas de cuentas, movimientos, configuración y Auth. Tarjetas y cuentas mantienen ledgers distintos. Las tarjetas pueden archivarse/restaurarse y conservan baseline e historial de statements.
 
-Continúan como contrato de diseño futuro, sin implementación parcial: tarjetas, statements, personas, receivables, MSI, presupuestos, planificación, salud, reportes, conciliación, importaciones y exportaciones. La Fase 3 no comienza sin autorización explícita.
+Continúan como contrato de diseño futuro, sin implementación parcial: compras productivas de tarjeta, pagos desde cuentas, refunds operativos, personas, receivables, MSI, presupuestos, planificación, salud, reportes, conciliación, importaciones y exportaciones. La Fase 3B no comienza sin autorización explícita.
