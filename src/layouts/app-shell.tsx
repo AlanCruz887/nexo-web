@@ -47,7 +47,7 @@ export function AppShell() {
       <main className="mx-auto w-full max-w-[1180px] px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:py-12 lg:pb-12"><Outlet /></main>
     </div>
 
-    <nav aria-label="Navegación inferior" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-border/70 bg-surface/95 px-1 pb-[max(.4rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl lg:hidden">
+    <nav aria-label="Navegación inferior" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-border/70 bg-surface/95 px-1 pb-[max(.4rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl lg:hidden print:hidden">
       <MobileNav item={primaryNavigation[0]} /><MobileNav item={primaryNavigation[1]} /><div className="flex min-h-12 items-center justify-center"><QuickAddMenu compact onSelect={openAction} /></div><MobileNav item={primaryNavigation[2]} /><MobileNav item={primaryNavigation[3]} />
     </nav>
 

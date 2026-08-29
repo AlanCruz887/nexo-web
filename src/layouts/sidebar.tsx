@@ -19,7 +19,7 @@ export function BrandMark({ compact = false }: { compact?: boolean }) {
 }
 
 export function Sidebar() {
-  return <aside className="fixed inset-y-0 left-0 z-30 hidden w-[232px] border-r border-border/70 bg-surface px-4 py-5 lg:flex lg:flex-col">
+  return <aside className="fixed inset-y-0 left-0 z-30 hidden w-[232px] border-r border-border/70 bg-surface px-4 py-5 lg:flex lg:flex-col print:hidden">
     <div className="px-2"><BrandMark /></div>
     <nav aria-label="Navegación principal" className="mt-9 space-y-6">
       <NavGroup label="General" items={primaryNavigation.slice(0, 2)} />

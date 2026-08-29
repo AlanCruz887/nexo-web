@@ -12,11 +12,11 @@ export interface ActionMenuItem {
   tone?: "default" | "danger";
 }
 
-export function ActionMenu({ items, label = "Más acciones" }: { items: ActionMenuItem[]; label?: string }) {
+export function ActionMenu({ items, label = "Más acciones", trigger }: { items: ActionMenuItem[]; label?: string; trigger?: ReactNode }) {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <Button aria-label={label} size="icon" variant="ghost"><MoreHorizontal className="size-5" /></Button>
+        {trigger ?? <Button aria-label={label} size="icon" variant="ghost"><MoreHorizontal className="size-5" /></Button>}
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content align="end" className="z-50 min-w-48 rounded-xl border border-border bg-surface-elevated p-1.5 shadow-float">

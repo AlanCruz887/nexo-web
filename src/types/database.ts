@@ -153,7 +153,7 @@ export type Contact = {
   notes: string | null; is_active: boolean; created_at: string; updated_at: string;
 };
 export type ContactBalance = { currency: CurrencyCode; outstanding_minor: string };
-export type ContactSummary = Contact & { balances: ContactBalance[]; last_activity_on: string | null; last_activity_description: string | null; periods?: PersonCollectionPeriod[] };
+export type ContactSummary = Contact & { balances: ContactBalance[]; last_activity_on: string | null; last_activity_description: string | null; periods?: PersonCollectionPeriod[] | undefined };
 export type ReceivableBalance = {
   id: string; user_id: string; contact_id: string; contact_name: string; source_event_id: string;
   source_kind: string; description: string; original_amount_minor: string; outstanding_minor: string;
@@ -169,16 +169,23 @@ export type ContactActivity = {
 export type PersonPeriodConcept = {
   id: string; description: string; statement_date: string | null; payment_due_date: string;
   amount_minor: string; paid_minor: string; outstanding_minor: string;
-  credit_applied_minor: string; installment_id: string | null; installment_number: number;
-  installment_count: number | null;
+  credit_applied_minor: string; purchase_amount_minor: string; installment_id: string | null;
+  installment_number: number; installment_count: number | null;
 };
 export type PersonCollectionPeriod = {
   currency: CurrencyCode; period_start: string | null; payment_due_date: string | null;
   subtotal_minor: string; paid_minor: string; credit_applied_minor: string;
-  remaining_minor: string; overdue_minor: string; total_outstanding_minor: string; credit_balance_minor: string;
+  remaining_minor: string; overdue_minor: string; overdue_since: string | null;
+  total_outstanding_minor: string; credit_balance_minor: string;
   concepts: PersonPeriodConcept[];
 };
 export type PersonCollectionProjection = { as_of_date: string; periods: PersonCollectionPeriod[] };
+export type PersonStatementPayment = {
+  event_id: string; occurred_on: string; currency: CurrencyCode; account_name: string | null;
+  amount_minor: string; applied_to_period_minor: string; applied_to_future_minor: string;
+  credit_generated_minor: string;
+};
+export type PersonStatement = PersonCollectionProjection & { payments: PersonStatementPayment[] };
 export type PersonInstallmentSummary = {
   plan_id: string; user_id: string; contact_id: string; card_id: string;
   origin: InstallmentPlanOrigin; installment_count: number; currency: CurrencyCode;
@@ -369,6 +376,7 @@ export type Database = {
       receivable_due_item_balances: { Row: Record<string, unknown>; Relationships: [] };
       person_credit_balances: { Row: { contact_id: string; user_id: string; currency: CurrencyCode; credit_balance_minor: string }; Relationships: [] };
       person_installment_summaries: { Row: PersonInstallmentSummary; Relationships: [] };
+      contact_period_overview: { Row: { contact_id: string; user_id: string; periods: PersonCollectionPeriod[] }; Relationships: [] };
     };
     Functions: {
       create_account: {
@@ -477,6 +485,7 @@ export type Database = {
       reverse_person_payment: { Args: { p_event_id: string; p_idempotency_key: string }; Returns: string };
       apply_person_credit: { Args: { p_contact_id: string; p_currency: string; p_amount_minor: string; p_idempotency_key: string }; Returns: string };
       get_person_collection_period: { Args: { p_contact_id: string; p_as_of_date?: string }; Returns: PersonCollectionProjection };
+      get_person_statement: { Args: { p_contact_id: string; p_as_of_date?: string }; Returns: PersonStatement };
       record_person_statement_export: { Args: { p_contact_id: string; p_period_start: string; p_period_end: string; p_format: string; p_idempotency_key: string }; Returns: string };
     };
     Enums: Record<never, never>;
