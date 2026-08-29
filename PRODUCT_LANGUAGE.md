@@ -36,6 +36,22 @@ Nexo habla de forma clara, tranquila, profesional y directa. Una etiqueta breve 
 | Pago recibido | Cobro que mueve valor de cuenta por cobrar a cuenta bancaria | ingreso |
 | Tu parte | Parte personal de una compra compartida | personal_amount |
 | Parte de otra persona | Importe que crea dinero por cobrar | allocation |
+| A pagar este periodo | Lo exigible ahora de una persona: vencido más el corte/fecha más próxima | due item, cronograma |
+| Te debe en total | Toda la deuda pendiente de la persona, no solo la de este periodo | total_outstanding_minor |
+| Falta | Lo que sigue pendiente de este periodo tras pagos y saldo a favor aplicado | remaining_minor |
+| Pagado | Lo ya cubierto de este periodo, por pago o por saldo a favor aplicado | paid_minor |
+| Este periodo | Lista de compras y mensualidades exigibles ahora | concepts, due items |
+| Mensualidad | Una cuota de un plan a meses | installment |
+| Compras a meses | Los MSI activos de una persona con su avance | installment plans, planes a meses |
+| Vencido | Parte de lo exigible del periodo cuya fecha ya pasó | overdue, past due |
+| Adelantado | Parte de un pago que cubrió obligaciones futuras además del periodo actual | advanced, applied to future |
+| Compra compartida | Compra con parte personal y parte de una o más personas | shared purchase |
+| Compra a meses | Compra o MSI que aparece en el plan a meses de la persona | installment purchase |
+| Te queda por pagar | Lo pendiente de un plan a meses después del periodo actual | remaining principal |
+| Saldo a favor | Dinero ya recibido de una persona que aún no se aplicó a una compra o mensualidad | credit balance, credit entry |
+| Aplicar saldo a favor | Usar saldo a favor existente para reducir una obligación, sin mover dinero de nuevo | apply credit |
+| Saldo a favor aplicado | Movimiento en la actividad cuando se usó saldo a favor en vez de un pago nuevo | credit_applied |
+| Compra | Un cargo asignado a la persona, sea único o parte de un plan a meses | purchase, charge |
 
 ## Acciones
 
@@ -48,7 +64,11 @@ Nexo habla de forma clara, tranquila, profesional y directa. Una etiqueta breve 
 ## Reglas editoriales
 
 - No mostrar `baseline`, `RPC`, `projection`, `financial_event`, `allocation`, `effect_scope`, `minor units`, `idempotency` ni nombres de columnas.
+- No mostrar tampoco `receivable`, `due item`, `credit entry`, `ledger`, `principal`, `period engine` ni `installment allocation`: en Personas se dice “te debe”, “a pagar este periodo”, “falta”, “saldo a favor” y “mensualidad”.
 - No llamar ingreso a un reembolso ni gasto a un pago de tarjeta.
 - No llamar “pago de este estado” al saldo utilizado total.
+- No llamar “te debe en total” a lo exigible del periodo, ni al revés: son dos cifras distintas y ambas se muestran, con “a pagar este periodo” siempre con mayor jerarquía visual.
 - Usar “estimado” para el próximo estado mientras el corte siga abierto.
+- Aplicar saldo a favor se explica como usar dinero ya recibido, nunca como un pago o movimiento bancario nuevo.
+- Un pago mayor a lo exigible del periodo no se llama "saldo a favor" si todavía hay deuda futura de esa persona: se explica como "adelantado". Solo se llama saldo a favor cuando ya no queda nada pendiente.
 - Las confirmaciones explican la consecuencia para saldos e historial, no el mecanismo interno.

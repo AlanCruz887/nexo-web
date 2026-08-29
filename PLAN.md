@@ -4,7 +4,7 @@
 
 Cada fase termina con software verificable y documentación actualizada. No se inicia la siguiente si fallan invariantes financieras, aislamiento RLS o reconstrucción de saldos. Las fases agregan capacidades sobre el mismo núcleo; no crean modelos paralelos para cuentas, tarjetas, personas o reportes.
 
-Estado actual: **Fase 4B completada: MSI nuevos e históricos personales. Personas no iniciada.**
+Estado actual: **Fase 5B completada salvo exportación: cronograma de cobro por periodo, saldo a favor y MSI de terceros/compartidos con UI de Personas terminada. Exportación (PDF/Excel/CSV) queda como último subbloque, pendiente de validación manual del resto.**
 
 Corrección posterior verificada: cierre cronológico de statements, saldo por periodo y bloqueo de cierres anticipados.
 
@@ -99,7 +99,7 @@ Alcance implementado:
 
 No incluye compras productivas de tarjeta, pagos desde cuentas, refunds, MSI, personas ni receivables.
 
-### Fase 4 — Personas, compras compartidas y receivables
+### Fase 4 — Personas, compras compartidas y receivables — Completada (incluye 5B, salvo exportación)
 
 Objetivo: implementar la diferenciación que define a Nexo.
 
@@ -374,7 +374,12 @@ Estas pruebas se agregan en la primera fase donde exista la entidad necesaria y 
 19. pago de tarjeta histórico no-impacting no modifica saldo;
 20. UI, export y reporte consumen el mismo contrato de proyección para cada métrica.
 21. el invariante `purchase_amount = personal_amount + third_party_allocations` se exige en compras y no se aplica indebidamente a otros tipos de evento;
-22. una compra MSI nueva impacta el principal de tarjeta una sola vez y sus cuotas no vuelven a sumar el mismo principal.
+22. una compra MSI nueva impacta el principal de tarjeta una sola vez y sus cuotas no vuelven a sumar el mismo principal;
+23. el cronograma de cobro por periodo reparte deuda ya existente y nunca crea principal nuevo: la suma de sus items por obligación es exactamente el nominal de esa obligación;
+24. "te debe en total" y "a pagar este periodo" son proyecciones distintas y ninguna sustituye a la otra en UI, export ni reporte;
+25. una aplicación de saldo a favor reduce lo pendiente igual que un pago pero no crea movimiento bancario ni ingreso, y aparece en la actividad de la persona con su propia etiqueta;
+26. un pago de persona que excede lo exigible del periodo actual adelanta obligaciones futuras de esa persona antes de convertirse en saldo a favor; solo el remanente después de saldar toda su deuda pendiente se guarda como saldo a favor;
+27. aplicar saldo a favor sin ninguna obligación pendiente elegible se rechaza en vez de crear un movimiento sin destino.
 
 ## 9. Estado después de Fase 4B
 
@@ -389,3 +394,19 @@ Implementado: personas activas/archivadas; compras personales, para otra persona
 Pruebas permanentes incorporadas: invariante de distribución exacta, compra para tercero sin gasto personal, varias personas, pago parcial FIFO, cobro sin ingreso, conservación de patrimonio económico, bloqueo de sobrepago, reversión de cobro, idempotencia y aislamiento A/B.
 
 Pendiente para 5B o fases autorizadas: MSI de terceros/compartidos, periodos mensuales de cobro, estado compartible, saldo a favor por sobrepago, recordatorios y automatización.
+
+## 11. Estado después de Fase 5B
+
+Implementado: MSI de terceros y compartidos (`create_shared_installment_purchase`, `import_shared_historical_installment_plan`) con la misma UI de compra/MSI histórico que ya existía, ahora con reparto de persona; un cronograma de cobro por obligación (`receivable_due_items`) que asigna la fecha exigible de cada porción ya nominal en `receivables`/`installments`, sin crear principal nuevo; aplicaciones firmadas e inmutables de pago o saldo a favor sobre ese cronograma (`receivable_due_applications`), que a su vez mueven `receivable_entries` — la única fuente de verdad del saldo pendiente — de modo que el cronograma sigue siendo proyección, no un segundo motor; saldo a favor por persona y moneda con su propio libro (`person_credit_entries`), desacoplado del saldo de receivables; `get_person_collection_period` como contrato único de lectura que entrega, ya calculados, el pago del periodo, lo que falta, la fecha límite, la deuda total y el saldo a favor, consumido igual por la tarjeta de la lista de personas y por el detalle.
+
+Corrección posterior verificada: la actividad de la persona (`contact_activity`) etiquetaba una aplicación de saldo a favor como si fuera una compra nueva, porque toda entrada que no fuera `person_payment` caía en la rama genérica "purchase". Ahora tiene su propia rama y etiqueta ("Saldo a favor aplicado"), sin bank movement asociado. `get_person_collection_period` también gana `installment_count` por concepto para poder mostrar "Mensualidad N de M" sin que el frontend vuelva a calcular el plazo del plan.
+
+Corrección posterior verificada: `get_person_collection_period` gana `overdue_minor` por periodo (subconjunto de "a pagar este periodo" cuya fecha ya pasó) para poder mostrar "Vencido" sin que el frontend decida qué cuenta como vencido. `contact_activity` gana `personal_amount_minor` e `installment_count` en su rama de compras para poder distinguir "Compra compartida" / "Compra para [persona]" / "Compra a meses" sin inferirlo fuera de los datos ya existentes.
+
+Corrección posterior verificada, encontrada al validar manualmente los escenarios de esta entrega: la previsualización de "Registrar pago" en el frontend comparaba el importe tecleado únicamente contra lo que falta del periodo actual para decidir si el excedente era saldo a favor. El dominio real reparte cualquier pago FIFO contra **toda** la deuda pendiente de la persona (incluidas mensualidades futuras de un MSI activo) antes de crear saldo a favor — confirmado registrando compras y pagos reales contra una reconstrucción limpia de las migraciones. La previsualización ahora distingue tres desenlaces: pago parcial, periodo pagado con el resto adelantando futuras obligaciones, y saldo a favor real solo cuando ya no queda nada pendiente. Ningún RPC cambió; el error estaba solo en la previsualización de React.
+
+UI de Personas completada: tarjeta y detalle muestran "A pagar este periodo" con jerarquía visual por encima de "Te debe en total" (nunca como sustituto), "Vencido" cuando aplica, "Este periodo" con los conceptos exigibles tal como los entrega el cronograma, "Compras a meses" con la parte de la persona en cada plan (te debe, mensualidad actual, próximo corte, progreso), saldo a favor con acción de aplicarlo (previsualizando saldo disponible, cuánto se aplicará y qué queda pendiente después, sin crear movimiento bancario) y "Registrar pago" con previsualización correcta de pago parcial/periodo completo con adelanto/saldo a favor real.
+
+Pruebas permanentes incorporadas: personas con MSI de tercero/compartido sin volver a duplicar principal ni gasto personal, reparto de cuotas persona por persona sin perder centavos, periodo consolidado con fecha límite derivada del corte de tarjeta correspondiente, vencido expuesto correctamente para fechas pasadas, pago parcial y sobrepago generando saldo a favor, aplicación de saldo a favor idempotente y sin segundo movimiento bancario, rechazo de aplicar saldo a favor sin obligación elegible, aislamiento A/B del cronograma y de la aplicación de crédito, la aplicación de saldo a favor visible en la actividad de la persona con la etiqueta correcta, y las compras MSI de la persona etiquetadas con su reparto y plazo correctos en esa misma actividad.
+
+Pendiente, explícitamente fuera de este bloque: exportación de estado de persona en PDF/Excel/CSV. `record_person_statement_export` queda como infraestructura de auditoría ya preparada (recibe la intención, valida formato y persona, y audita), sin generar ningún archivo todavía. Se retoma como el subbloque final de 5B, después de validar manualmente el resto de esta fase.
