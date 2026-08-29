@@ -71,4 +71,19 @@ Nexo habla de forma clara, tranquila, profesional y directa. Una etiqueta breve 
 - Usar “estimado” para el próximo estado mientras el corte siga abierto.
 - Aplicar saldo a favor se explica como usar dinero ya recibido, nunca como un pago o movimiento bancario nuevo.
 - Un pago mayor a lo exigible del periodo no se llama "saldo a favor" si todavía hay deuda futura de esa persona: se explica como "adelantado". Solo se llama saldo a favor cuando ya no queda nada pendiente.
+- No mostrar tampoco `projection`, `statement document`, `lateral join` ni nombres de archivo/función en el estado de persona o sus exportaciones: se dice "Este periodo", "Pagos recibidos", "Vencido", "Fecha límite", "Compra compartida" y "Mensualidad".
+- Una exportación nunca muestra UUID, nombres de tabla ni nombres de RPC; solo texto y cifras que la persona pueda entender.
 - Las confirmaciones explican la consecuencia para saldos e historial, no el mecanismo interno.
+
+## Estado de persona y exportación
+
+| Concepto de producto | Uso visible | No usar en la UI |
+|---|---|---|
+| Ver estado | Acción que abre el documento consolidado de una persona | statement, projection |
+| Vencido | Parte de lo exigible que ya pasó su fecha límite | overdue, due item |
+| Vencido desde | Fecha del vencimiento más antiguo sin cubrir | overdue_since |
+| Adelantado | Parte de un pago que cubrió deuda futura, no saldo a favor | applied to future |
+| Generó saldo a favor | Parte de un pago que quedó sin obligación a la que aplicarse | credit_generated |
+| MSI activos | Planes a meses vigentes de la persona, dentro del estado | installment plans |
+| Exportar | Acción que genera el documento real (PDF, Excel o CSV) | download, generate report |
+| Compartir | Envía el documento generado con las herramientas del dispositivo | share, upload |

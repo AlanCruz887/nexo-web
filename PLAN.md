@@ -4,7 +4,7 @@
 
 Cada fase termina con software verificable y documentación actualizada. No se inicia la siguiente si fallan invariantes financieras, aislamiento RLS o reconstrucción de saldos. Las fases agregan capacidades sobre el mismo núcleo; no crean modelos paralelos para cuentas, tarjetas, personas o reportes.
 
-Estado actual: **Fase 5B completada salvo exportación: cronograma de cobro por periodo, saldo a favor y MSI de terceros/compartidos con UI de Personas terminada. Exportación (PDF/Excel/CSV) queda como último subbloque, pendiente de validación manual del resto.**
+Estado actual: **Fase 5C completada: estado de persona consolidado con exportación PDF/Excel/CSV, compartir e impresión. Cierra el módulo de Personas iniciado en 5A/5B. Pendiente de validación manual antes de continuar a una fase posterior.**
 
 Corrección posterior verificada: cierre cronológico de statements, saldo por periodo y bloqueo de cierres anticipados.
 
@@ -99,7 +99,7 @@ Alcance implementado:
 
 No incluye compras productivas de tarjeta, pagos desde cuentas, refunds, MSI, personas ni receivables.
 
-### Fase 4 — Personas, compras compartidas y receivables — Completada (incluye 5B, salvo exportación)
+### Fase 4 — Personas, compras compartidas y receivables — Completada (incluye 5B y 5C: estado de persona y exportación)
 
 Objetivo: implementar la diferenciación que define a Nexo.
 
@@ -379,7 +379,10 @@ Estas pruebas se agregan en la primera fase donde exista la entidad necesaria y 
 24. "te debe en total" y "a pagar este periodo" son proyecciones distintas y ninguna sustituye a la otra en UI, export ni reporte;
 25. una aplicación de saldo a favor reduce lo pendiente igual que un pago pero no crea movimiento bancario ni ingreso, y aparece en la actividad de la persona con su propia etiqueta;
 26. un pago de persona que excede lo exigible del periodo actual adelanta obligaciones futuras de esa persona antes de convertirse en saldo a favor; solo el remanente después de saldar toda su deuda pendiente se guarda como saldo a favor;
-27. aplicar saldo a favor sin ninguna obligación pendiente elegible se rechaza en vez de crear un movimiento sin destino.
+27. aplicar saldo a favor sin ninguna obligación pendiente elegible se rechaza en vez de crear un movimiento sin destino;
+28. el estado de persona y sus exportaciones (PDF/Excel/CSV) muestran exactamente las mismas cifras que la proyección de dominio; ninguna exportación recalcula ni redondea de forma distinta a la pantalla;
+29. una exportación nunca mezcla monedas: cada moneda de la persona aparece en su propio bloque, tabla u hoja, sin conversión automática;
+30. una exportación real nunca contiene identificadores internos, nombres de tabla ni nombres de RPC, y siempre muestra los importes completos aunque el modo de privacidad esté activo en pantalla.
 
 ## 9. Estado después de Fase 4B
 
@@ -410,3 +413,19 @@ UI de Personas completada: tarjeta y detalle muestran "A pagar este periodo" con
 Pruebas permanentes incorporadas: personas con MSI de tercero/compartido sin volver a duplicar principal ni gasto personal, reparto de cuotas persona por persona sin perder centavos, periodo consolidado con fecha límite derivada del corte de tarjeta correspondiente, vencido expuesto correctamente para fechas pasadas, pago parcial y sobrepago generando saldo a favor, aplicación de saldo a favor idempotente y sin segundo movimiento bancario, rechazo de aplicar saldo a favor sin obligación elegible, aislamiento A/B del cronograma y de la aplicación de crédito, la aplicación de saldo a favor visible en la actividad de la persona con la etiqueta correcta, y las compras MSI de la persona etiquetadas con su reparto y plazo correctos en esa misma actividad.
 
 Pendiente, explícitamente fuera de este bloque: exportación de estado de persona en PDF/Excel/CSV. `record_person_statement_export` queda como infraestructura de auditoría ya preparada (recibe la intención, valida formato y persona, y audita), sin generar ningún archivo todavía. Se retoma como el subbloque final de 5B, después de validar manualmente el resto de esta fase.
+
+## 12. Estado después de Fase 5C
+
+Implementado: `get_person_statement`, una función nueva que llama a `get_person_collection_period` (sin duplicar su lógica de periodo) y agrega, leyendo el mismo ledger, el desglose de cada pago real en aplicado al periodo / adelantado a deuda futura / saldo a favor generado, comparando cada aplicación contra los conceptos que el propio periodo ya marcó como exigibles. Dos extensiones aditivas sobre `get_person_collection_period` y `receivable_due_item_balances`: `overdue_since` (fecha del vencido más antiguo) y `purchase_amount_minor` por concepto (el total de la compra detrás de la parte de la persona, para poder mostrar "de un total de $X" sin una segunda consulta).
+
+Ruta `/personas/:id/estado` (alias `/people/:id/estado`): documento limpio con resumen (a pagar este periodo, fecha límite, te debe en total, pagado, falta, vencido si aplica, saldo a favor si aplica, siempre como cifras separadas), desglose "Este periodo" con cada concepto y su tipo (mensualidad o compra compartida), "MSI activos" con la parte de la persona por plan, y "Pagos recibidos" con el desglose exacto de cada pago. Toda la pantalla lee `src/lib/person-statement.ts` (`buildStatementDocument`), la misma capa que alimenta las tres exportaciones — no hay una segunda fuente de datos entre pantalla y archivo.
+
+Exportaciones reales, no capturas de pantalla: PDF con `pdf-lib` (ya era dependencia, sin instalar nada nuevo) con paginación real, encabezado repetido, pie de página con fecha de generación y número de página, y texto seleccionable; Excel `.xlsx` real (OOXML) construido a mano y empaquetado con `fflate` (también ya era dependencia) en tres hojas — Resumen, Conceptos, Pagos — con celdas monetarias como número real con formato de moneda, no como texto; CSV con BOM UTF-8 para acentos correctos en Excel/Numbers. Ninguna exportación incluye UUID, nombres de tabla ni nombres de RPC. El modo de privacidad de la aplicación nunca alcanza a una exportación: `MoneyValue` (que sí lo respeta) solo se usa en pantalla, las exportaciones leen los importes crudos directamente.
+
+Compartir usa la Web Share API con archivo cuando el navegador la soporta (`navigator.canShare`); si no está disponible, descarga el PDF normalmente. No se sube ningún archivo a Supabase Storage ni a ningún bucket — todo se genera y comparte localmente en el navegador. `record_person_statement_export` (ya existía, solo se conectó) audita cada exportación real (`person_statement_exported`: contact_id, periodo, formato, fecha) sin guardar los importes del documento en el evento de auditoría.
+
+Decisión explícita sobre históricos (Fase 5C, §25 del encargo): **no se implementó selector de periodos anteriores.** `get_person_collection_period`/`get_person_statement` leen `outstanding_minor` como estado actual de cada `receivable_due_item`, no como una foto del pasado; pedir un `p_as_of_date` anterior desplaza qué corte se considera "vigente" pero no reconstruye cuánto estaba pagado en esa fecha real, porque lo pagado hoy también se refleja en fechas pasadas. Reconstruir un periodo histórico exacto necesitaría o (a) derivar el estado a partir de `receivable_due_applications`/`account_entries` filtrando por `created_at`, lo cual es posible pero no se implementó en este bloque, o (b) un snapshot inmutable guardado en el momento del cierre, que sería una fuente de verdad nueva y requiere decisión explícita del usuario antes de crearse. Por ahora el estado de persona muestra únicamente el periodo vigente; no existe un selector que simule históricos con filtros incorrectos.
+
+Pruebas permanentes incorporadas: consolidación del estado para MSI compartido sin mostrar el importe completo de la mensualidad de tarjeta; pago parcial reduciendo periodo y deuda total en la cantidad exacta; sobrepago con MSI futuro pendiente adelantando esa deuda sin crear saldo a favor; saldo a favor real solo cuando se salda toda la deuda, sin nunca mostrar deuda negativa; rechazo de aplicar saldo a favor sin obligación elegible; dos monedas expuestas en bloques separados sin mezclarse; persona sin deuda abre su detalle sin error; aislamiento A/B de `get_person_statement`; y pruebas unitarias de los tres formatos de exportación verificando los valores financieros exactos que contienen (no solo que el archivo se genera), incluida paginación real del PDF.
+
+Pendiente, fuera de alcance de este bloque: selector de periodos anteriores (ver decisión arriba), presupuestos, metas, reportes globales y salud financiera.
