@@ -162,18 +162,20 @@ export type ReceivableBalance = {
 export type ContactActivity = {
   event_id: string; contact_id: string; user_id: string; kind: string; amount_minor: string;
   description: string; occurred_on: string; notes: string | null; created_at: string;
-  currency: CurrencyCode; activity_type: "purchase" | "payment";
+  currency: CurrencyCode; activity_type: "purchase" | "payment" | "credit_applied";
+  application_id: string | null; personal_amount_minor: string | null; installment_count: number | null;
 };
 
 export type PersonPeriodConcept = {
   id: string; description: string; statement_date: string | null; payment_due_date: string;
   amount_minor: string; paid_minor: string; outstanding_minor: string;
   credit_applied_minor: string; installment_id: string | null; installment_number: number;
+  installment_count: number | null;
 };
 export type PersonCollectionPeriod = {
   currency: CurrencyCode; period_start: string | null; payment_due_date: string | null;
   subtotal_minor: string; paid_minor: string; credit_applied_minor: string;
-  remaining_minor: string; total_outstanding_minor: string; credit_balance_minor: string;
+  remaining_minor: string; overdue_minor: string; total_outstanding_minor: string; credit_balance_minor: string;
   concepts: PersonPeriodConcept[];
 };
 export type PersonCollectionProjection = { as_of_date: string; periods: PersonCollectionPeriod[] };

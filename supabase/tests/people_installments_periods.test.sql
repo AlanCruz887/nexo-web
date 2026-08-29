@@ -81,6 +81,19 @@ begin
     raise exception 'collection period did not expose current obligations'; end if;
   if (current_period->>'payment_due_date')::date <> '2026-10-04' then
     raise exception 'consolidated due date did not use the latest relevant card due date'; end if;
+  if not exists (
+    select 1 from jsonb_array_elements(current_period->'concepts') concept
+    where (concept->>'installment_count')::int = 12
+  ) then raise exception 'period concept is missing its installment term'; end if;
+  if coalesce((current_period->>'overdue_minor')::bigint, 0) <> 0 then
+    raise exception 'nothing should be overdue yet at the as-of date used for the current period'; end if;
+  period := public.get_person_collection_period(carlos, '2027-06-01');
+  select value into current_period from jsonb_array_elements(period->'periods') value
+    where value->>'currency' = 'MXN';
+  if (current_period->>'overdue_minor')::bigint <= 0 then
+    raise exception 'far-future as-of date did not surface overdue MSI installments'; end if;
+  if (current_period->>'overdue_minor')::bigint > (current_period->>'remaining_minor')::bigint then
+    raise exception 'overdue amount cannot exceed what remains for the period'; end if;
 
   payment_id := public.create_person_payment(carlos, account_id, 100000, '2026-08-28', null, '5b-partial');
   repeated := public.create_person_payment(carlos, account_id, 100000, '2026-08-28', null, '5b-partial');
@@ -103,6 +116,20 @@ begin
   if repeated <> credit_id then raise exception 'credit application idempotency failed'; end if;
   if exists (select 1 from public.account_entries where financial_event_id = credit_id) then
     raise exception 'credit application created a second bank movement'; end if;
+  if not exists (select 1 from public.contact_activity
+      where event_id = credit_id and contact_id = carlos and activity_type = 'credit_applied'
+        and amount_minor = -100000 and description = 'Compra posterior') then
+    raise exception 'credit application is missing from the person activity feed'; end if;
+  if exists (select 1 from public.contact_activity where event_id = credit_id and activity_type <> 'credit_applied') then
+    raise exception 'credit application leaked into the activity feed as a bank movement'; end if;
+  if not exists (select 1 from public.contact_activity
+      where event_id = iphone_event and contact_id = carlos
+        and personal_amount_minor = 0 and installment_count = 12) then
+    raise exception 'the MSI purchase fully assigned to Carlos is missing its activity label data'; end if;
+  if not exists (select 1 from public.contact_activity
+      where event_id = shared_event and contact_id = carlos
+        and personal_amount_minor = 600000 and installment_count = 12) then
+    raise exception 'a shared MSI purchase is missing its activity label data'; end if;
 
   historical_plan := public.import_shared_historical_installment_plan(card_id, 'MSI histórico',
     2400000, 0,
