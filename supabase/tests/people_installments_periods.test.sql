@@ -87,6 +87,11 @@ begin
   ) then raise exception 'period concept is missing its installment term'; end if;
   if coalesce((current_period->>'overdue_minor')::bigint, 0) <> 0 then
     raise exception 'nothing should be overdue yet at the as-of date used for the current period'; end if;
+  if (select periods from public.contact_period_overview where contact_id = carlos)
+      <> (public.get_person_collection_period(carlos, current_date)->'periods') then
+    raise exception 'contact_period_overview drifted from get_person_collection_period for the same contact'; end if;
+  if (select count(*) from public.contact_period_overview) <> 2 then
+    raise exception 'contact_period_overview should have exactly one row per contact'; end if;
   period := public.get_person_collection_period(carlos, '2027-06-01');
   select value into current_period from jsonb_array_elements(period->'periods') value
     where value->>'currency' = 'MXN';
@@ -168,6 +173,8 @@ begin
   select * into ids from phase5b_ids;
   if exists (select 1 from public.receivable_due_items where user_id = '5d5d5d5d-5d5d-4d5d-8d5d-5d5d5d5d5d5d') then
     raise exception 'RLS exposed user B due items'; end if;
+  if exists (select 1 from public.contact_period_overview where contact_id = ids.contact_b) then
+    raise exception 'RLS exposed user B in contact_period_overview'; end if;
   begin perform public.get_person_collection_period(ids.contact_b, current_date);
   exception when no_data_found then failed := true; end;
   if not failed then raise exception 'user A exported/read user B collection period'; end if;

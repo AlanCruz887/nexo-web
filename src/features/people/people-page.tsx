@@ -28,10 +28,14 @@ export function PeoplePage() {
 }
 
 function PersonCard({ contact }: { contact: ContactSummary }) {
-  const periods = contact.periods ?? [];
+  // contact.balances is the base query (always available if the list loaded
+  // at all); contact.periods is a secondary enrichment that can be
+  // undefined when it failed to load, so it never decides whether this
+  // person has debt — only whether we can show "este periodo" for them.
+  const periodsLoaded = contact.periods !== undefined;
   return <Link className="group rounded-2xl border border-border bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" to={`/personas/${contact.id}`}>
     <div className="flex items-start gap-4"><span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong"><Users className="size-5" /></span><div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{contact.name}</h2><p className="mt-1 text-xs text-muted-foreground">{contact.last_activity_description ?? "Sin actividad"}</p>
-      {periods.length ? <div className="mt-4 space-y-3">{periods.map((period) => <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-2" key={period.currency}><div><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Te debe · {period.currency}</p><MoneyValue amount={period.total_outstanding_minor} size="sm" currency={period.currency} /></div><div className="text-right"><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Este periodo</p><MoneyValue amount={period.remaining_minor} currency={period.currency} size="sm" /></div>{BigInt(period.credit_balance_minor) > 0n ? <p className="w-full text-xs font-medium text-primary-strong">Saldo a favor <MoneyValue amount={period.credit_balance_minor} currency={period.currency} size="sm" /></p> : null}</div>)}</div> : <p className="mt-4 text-sm font-medium text-success">Sin saldo pendiente</p>}
+      {contact.balances.length ? <div className="mt-4 space-y-3">{contact.balances.map((balance) => { const period = contact.periods?.find((item) => item.currency === balance.currency); return <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-2" key={balance.currency}><div><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Te debe · {balance.currency}</p><MoneyValue amount={balance.outstanding_minor} size="sm" currency={balance.currency} /></div><div className="text-right"><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Este periodo</p>{period ? <MoneyValue amount={period.remaining_minor} currency={balance.currency} size="sm" /> : <p className="text-sm font-semibold text-muted-foreground">{periodsLoaded ? "—" : "No disponible"}</p>}</div>{period && BigInt(period.credit_balance_minor) > 0n ? <p className="w-full text-xs font-medium text-primary-strong">Saldo a favor <MoneyValue amount={period.credit_balance_minor} currency={balance.currency} size="sm" /></p> : null}</div>; })}</div> : <p className="mt-4 text-sm font-medium text-success">Sin saldo pendiente</p>}
     </div></div>
   </Link>;
 }
