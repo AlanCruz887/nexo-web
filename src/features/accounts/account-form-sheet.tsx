@@ -83,7 +83,7 @@ export function AccountFormSheet({
 
   return (
     <ResponsiveDialog
-      description={account ? "Actualiza los datos descriptivos sin alterar su historial." : "Agrega el punto de partida de tu dinero disponible."}
+      description={account ? "Actualiza cómo identificas esta cuenta. El saldo y el historial no cambiarán." : "Agrega una cuenta y el saldo con el que quieres empezar."}
       footer={<><Button onClick={() => onOpenChange(false)} type="button" variant="ghost">Cancelar</Button><Button disabled={mutation.isPending} form="account-form" type="submit">{mutation.isPending ? "Guardando…" : account ? "Guardar cambios" : "Agregar cuenta"}</Button></>}
       onOpenChange={onOpenChange}
       open={open}
@@ -110,7 +110,7 @@ export function AccountFormSheet({
               </FormField>
             ) : null}
           {!account ? (
-            <div className="sm:col-span-2 rounded-2xl bg-surface-secondary p-5"><FormField error={form.formState.errors.opening_balance?.message} hint="El saldo con el que esta cuenta entra a Nexo." id="opening-balance" label="Saldo inicial">
+            <div className="sm:col-span-2 rounded-2xl bg-surface-secondary p-5"><FormField error={form.formState.errors.opening_balance?.message} hint="Escribe el saldo que tiene la cuenta en esta fecha." id="opening-balance" label="Saldo para empezar">
               <Input className="h-16 border-0 bg-transparent px-0 text-3xl font-semibold tabular-nums shadow-none focus-visible:ring-0" id="opening-balance" inputMode="decimal" placeholder="$ 0.00" {...form.register("opening_balance")} />
             </FormField>
             </div>

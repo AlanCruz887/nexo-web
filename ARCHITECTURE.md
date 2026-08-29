@@ -97,11 +97,11 @@ La membresía a un ciclo usa `[cycle_start, statement_date)`. Para días 29–31
 
 | Entidad | Responsabilidad | Campos conceptuales clave |
 |---|---|---|
-| `installment_plans` | Contrato del plan | purchase_event, card, original_principal_minor, term, installment_amount_minor, reported_paid_before_import_minor, principal_paid_minor, mode, included_in_opening_balance |
-| `installments` | Calendario y saldo por cuota | plan, number, due/cycle date, principal_minor, paid_minor, status |
+| `installment_plans` | Contrato del plan nuevo o histórico | purchase_event, card, origin, original_amount_minor, term, installment_amount_minor, reported_paid_amount_minor, principal_paid_before_nexo_minor, included_in_opening_balance |
+| `installments` | Calendario y principal por cuota | plan, number, due_statement_date, principal_amount_minor, reported_amount_minor, status |
 | `installment_allocations` | Parte personal o de persona por cuota | installment, allocation, amount |
 
-Las cuotas pasadas de un MSI histórico existen con estado `paid_before_import`, sin inventar movimientos bancarios. La cuota indicada como actual queda abierta según fecha y las posteriores quedan futuras. El plan conserva tanto el pago real reportado como el principal pagado reconciliado, el principal pendiente y su relación con baseline. Una compra MSI nueva crea desde la compra el efecto de tarjeta por el principal completo; los statements seleccionan solo las cuotas de su ciclo.
+Las cuotas pasadas de un MSI histórico existen con estado `paid_before_nexo`, sin inventar movimientos bancarios. La cuota indicada como actual queda abierta según fecha y las posteriores quedan futuras. El plan conserva por separado el pago real reportado, el principal amortizado, el principal pendiente y su relación con el baseline. Una compra MSI nueva crea desde la compra el efecto de tarjeta por el principal completo; los statements seleccionan solo las cuotas de su ciclo.
 
 ### 3.6 Personas y cobros
 
@@ -180,9 +180,12 @@ Cada RPC de escritura valida `auth.uid()`, ownership, estado, moneda e idempoten
 | `update_transaction` | reversión del original, reemplazo y auditoría |
 | `reverse_transaction` / `reverse_transfer` | evento compensatorio y entradas opuestas |
 | `update_transfer_notes` | anotación inmutable y auditable, sin efecto financiero |
-| `record_purchase` | evento, cargo a cuenta/tarjeta, gasto personal, receivables y vínculos |
+| `create_card_purchase` / `update_card_purchase` | evento inmutable, entrada de tarjeta, ciclo central, metadata y reversión/reemplazo |
+| `create_card_payment` / `reverse_card_payment` | entrada negativa de cuenta y tarjeta, asignaciones firmadas a statements y restauración bilateral |
+| `create_card_refund` / `reverse_card_refund` | crédito de tarjeta y reducción del gasto personal neto, con referencia opcional |
+| `record_purchase` | agregado futuro para compras distribuidas, gasto personal, receivables y vínculos |
 | `create_installment_purchase` | compra, plan, cuotas, asignaciones y obligación de tarjeta |
-| `import_started_installment_plan` | plan histórico, cuotas previas, pendiente y efecto baseline/no-baseline |
+| `import_historical_installment_plan` | evento histórico no-gasto, plan, cuotas previas, principal pendiente y efecto incluido/no incluido en saldo inicial |
 | `receive_person_payment` | abono a cuenta, aplicación parcial/total y excedente a saldo a favor |
 | `apply_person_credit` | reducción coordinada de saldo a favor y receivable, sin nuevo flujo |
 | `record_card_payment` | reducción de cuenta y pasivo, aplicación a statements o evidencia histórica no-impacting |
@@ -206,10 +209,14 @@ Las proyecciones son contratos de lectura compartidos por UI, exportaciones y re
 | Saldo de cuenta | `sum(account_entries.amount_minor)`; el opening se materializa una sola vez como entrada |
 | Saldo utilizado de tarjeta | `card_summaries.used_balance_minor`: baseline + suma firmada de `card_entries` con `effect_scope = impacting` |
 | Pago actual | `card_summaries.current_payment_minor`: `remaining_due_minor` del último `card_statement` cerrado aplicable |
-| Acumulado del ciclo | `card_current_cycles.open_cycle_accumulated_minor`: cargos/refunds/ajustes con `cycle_start <= transaction_date < statement_date`; excluye pagos y no es pago requerido |
+| Compras netas del ciclo | `card_current_cycles.open_cycle_accumulated_minor`: cargos/refunds/ajustes con `cycle_start <= transaction_date < statement_date`; excluye pagos y no es saldo utilizado |
+| Próximo estado cerrable | `card_statement_close_candidates`: primer corte vencido sin snapshot desde el baseline; nunca apunta al ciclo futuro |
+| Saldo preliminar del estado | `card_statement_preview_balance`: baseline solo en su primer ciclo más actividad impactante del periodo; no usa `used_balance_minor` |
+| Clasificación de pagos | `card_payment_classifications`: pago total, parte aplicada y excedente anticipado, derivados del ledger de asignaciones |
+| Actividad por estado | `card_statement_activity_segments`: compras/refunds y segmentos aplicados/anticipados; el anticipo usa ciclo derivado, no un statement futuro ficticio |
 | Disponible de tarjeta | `card_summaries.available_credit_minor`: límite menos saldo utilizado, sin FX |
 | Fecha límite | `card_due_date(statement_date, payment_days_after_statement)`; usa días calendario y cruza mes/año |
-| Gasto personal | Fase 2: suma de `financial_events.personal_amount_minor` para gastos vigentes; cuando existan compras distribuidas, la proyección compartida sumará sus asignaciones personales sin cambiar el contrato |
+| Gasto personal | eventos vigentes: `expense + card_charge - card_refund` usando `personal_amount_minor`; pagos y transferencias quedan excluidos |
 | Ingreso | suma de `financial_events.amount_minor` para eventos `income` vigentes; transferencias, reembolsos, ajustes y cobros futuros nunca entran aquí |
 | Cash flow | entradas y salidas firmadas de `account_entries` por `occurred_on`; se presentan por moneda y la clasificación del evento mantiene transferencias separadas de ingreso/gasto |
 | Receivable pendiente | principal de `receivable_items` menos pagos, créditos aplicados, reembolsos y reversiones |
@@ -368,7 +375,7 @@ Riesgos/decisiones que siguen abiertos para fases posteriores y no bloquean el e
 - Conciliación e importación dependen de idempotencia, eventos y explicación de saldos.
 - Exportación depende de consultas estables y privacidad; no debe definir una segunda lógica de cálculo.
 
-## 16. Estado de implementación después de Fase 3A
+## 16. Estado de implementación después de Fase 4A
 
 Implementado:
 
@@ -387,6 +394,12 @@ Implementado:
 - tablas `credit_cards`, `card_baselines`, `card_entries` y `card_statements`;
 - funciones puras de ciclo en PostgreSQL y cierre de statement atómico/idempotente;
 - vistas `card_summaries` y `card_current_cycles`, wallet y detalle de tarjeta;
+- cierre cronológico mediante `card_statement_close_candidates`, con bloqueo de cortes futuros y cálculo por periodo;
+- proyecciones `card_payment_classifications` y `card_statement_activity_segments` para separar pagos aplicados de anticipos sin duplicar persistencia;
+- tablas inmutables `card_transaction_details` y `card_statement_payment_allocations`;
+- RPC de compra, edición/reversión, pago/reversión y reembolso/reversión;
+- vista `financial_activity` como contrato único para el timeline global de cuentas y tarjetas;
+- asignación de pagos a statements pendientes por vencimiento y preservación del excedente como crédito;
 - vistas `account_balances` y `account_activity` con RLS heredada mediante `security_invoker`;
 - RPC tipados para crear/editar/archivar/restaurar cuentas, registrar/editar/revertir movimientos y transferir/revertir;
 - rutas canónicas de cuentas, detalle y movimientos, con alias `/accounts`, `/accounts/:id` y `/transactions`, queries TanStack, filtros y contexto preseleccionado;
@@ -408,10 +421,15 @@ PostgreSQL bigint minor units
 
 No implementado y conservado únicamente como diseño futuro:
 
-- compras productivas, pagos y reembolsos de tarjeta;
 - personas, receivables, saldos a favor y cobros;
-- installment plans/MSI;
+- MSI de terceros y MSI compartidos;
 - presupuestos, recurrencias, planificación, patrimonio y reportes;
 - importación, conciliación, recibos y exportación.
 
-No existen implementaciones parciales de MSI, personas, receivables, presupuestos, planificación, salud, conciliación ni reportes. La Fase 3B requiere autorización explícita.
+Fases 4A–4B agregan `installment_plans`, `installments` y revisiones inmutables de metadata. Una compra nueva es el único impacto de su principal. Una importación histórica usa una entrada por principal pendiente solo cuando no estaba incluido en el saldo inicial; en caso contrario es `historical_non_impacting`. El calendario se consume en `card_statement_preview_balance` y `card_statement_activity_segments`, mientras `card_summaries` conserva el ledger como única fuente del saldo utilizado. `installment_plan_summaries` e `installment_schedule` son vistas `security_invoker`; todo cambio financiero pasa por RPC idempotentes con ownership.
+
+Fase 5A agrega `contacts`, `receivables`, `purchase_allocations` y `receivable_entries`. Las cuatro tablas usan ownership explícito, RLS desde creación, grants mínimos e inmutabilidad en los libros financieros. `receivable_balances`, `contact_balance_summary`, `contact_activity`, `purchase_allocation_details` y `person_payment_activity` son vistas `security_invoker`.
+
+Los comandos `create/update_shared_account_purchase` y `create/update_shared_card_purchase` validan en PostgreSQL la suma exacta de la distribución y crean evento, entrada financiera, receivables y auditoría en una sola transacción. `create_person_payment` bloquea filas y aplica FIFO por fecha; `reverse_person_payment` compensa cuenta y receivables. El frontend consume servicios y hooks, no llama Supabase desde componentes de presentación.
+
+No existen implementaciones parciales de MSI de terceros/compartidos, estados mensuales de personas, saldos a favor, presupuestos, planificación, salud, conciliación ni reportes.

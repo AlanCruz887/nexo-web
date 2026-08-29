@@ -14,12 +14,15 @@ import { toUserMessage } from "@/lib/errors";
 import { parseMoneyInput } from "@/lib/money";
 import { movementDraftFromActivity } from "@/lib/movement-draft";
 import { movementFormSchema, type MovementFormInput } from "@/schemas/movement";
-import type { AccountActivity, AccountBalance, TransactionKind } from "@/types/database";
+import type { AccountBalance, FinancialActivity, TransactionKind } from "@/types/database";
+import { PurchaseSplitFields } from "@/features/people/purchase-split-fields";
+import { resolvePurchaseSplit } from "@/lib/purchase-split";
 
 export function MovementFormSheet({
   accounts,
   defaultAccountId,
   defaultKind = "expense",
+  defaultContactId,
   existing,
   prefill,
   onUpdated,
@@ -29,8 +32,9 @@ export function MovementFormSheet({
   accounts: AccountBalance[];
   defaultAccountId?: string | undefined;
   defaultKind?: Exclude<TransactionKind, "adjustment">;
-  existing?: AccountActivity | undefined;
-  prefill?: AccountActivity | undefined;
+  defaultContactId?: string | undefined;
+  existing?: FinancialActivity | undefined;
+  prefill?: FinancialActivity | undefined;
   onUpdated?: ((eventId: string) => void) | undefined;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -49,6 +53,9 @@ export function MovementFormSheet({
       occurred_on: format(new Date(), "yyyy-MM-dd"),
       description: "",
       notes: "",
+      purchase_scope: defaultContactId ? "other" : "self",
+      personal_amount: defaultContactId ? "0" : "",
+      allocations: defaultContactId ? [{ contact_id: defaultContactId, amount: "" }] : [],
     },
   });
   const kind = form.watch("kind");
@@ -64,8 +71,11 @@ export function MovementFormSheet({
       occurred_on: today,
       description: "",
       notes: "",
+      purchase_scope: defaultContactId ? "other" : "self",
+      personal_amount: defaultContactId ? "0" : "",
+      allocations: defaultContactId ? [{ contact_id: defaultContactId, amount: "" }] : [],
     });
-  }, [accounts, defaultAccountId, defaultKind, form, open, sourceMovement]);
+  }, [accounts, defaultAccountId, defaultContactId, defaultKind, form, open, sourceMovement]);
 
   async function handleSubmit(input: MovementFormInput) {
     try {
@@ -73,6 +83,7 @@ export function MovementFormSheet({
         form.setError("amount", { message: "El importe debe ser mayor que cero." });
         return;
       }
+      if (input.kind === "expense") resolvePurchaseSplit(input);
       if (existing) {
         const updatedEventId = await updateMovement.mutateAsync(input);
         onUpdated?.(updatedEventId);
@@ -93,8 +104,8 @@ export function MovementFormSheet({
 
   return (
     <ResponsiveDialog
-      description={existing ? "La edición conserva el historial mediante una reversión y reemplazo." : "Primero el importe. Los detalles vienen después."}
-      footer={<><Button onClick={() => onOpenChange(false)} type="button" variant="ghost">Cancelar</Button><Button disabled={mutation.isPending} form="movement-form" type="submit">{mutation.isPending ? "Guardando…" : existing ? "Guardar cambios" : "Guardar movimiento"}</Button></>}
+      description={existing ? "Nexo actualizará el movimiento y conservará el cambio en tu historial." : "Registra el importe y los datos básicos del movimiento."}
+      footer={<><Button onClick={() => onOpenChange(false)} type="button" variant="ghost">Cancelar</Button><Button disabled={mutation.isPending} form="movement-form" type="submit">{mutation.isPending ? "Guardando…" : existing ? "Guardar cambios" : kind === "income" ? "Registrar ingreso" : "Registrar gasto"}</Button></>}
       onOpenChange={onOpenChange}
       open={open}
       size="medium"
@@ -123,6 +134,7 @@ export function MovementFormSheet({
               </button>
             ))}
           </div>
+          {kind === "expense" ? <PurchaseSplitFields amount={form.watch("amount")} allocations={form.watch("allocations")} onAllocations={(value) => form.setValue("allocations", value, { shouldValidate: true })} onPersonalAmount={(value) => form.setValue("personal_amount", value, { shouldValidate: true })} onScope={(value) => form.setValue("purchase_scope", value, { shouldValidate: true })} personalAmount={form.watch("personal_amount")} scope={form.watch("purchase_scope")} /> : null}
           <FormField error={form.formState.errors.account_id?.message} id="movement-account" label="Cuenta">
             <Select disabled={Boolean(existing)} id="movement-account" {...form.register("account_id")}>
               {activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {account.currency}{!account.is_active ? " · Archivada" : ""}</option>)}

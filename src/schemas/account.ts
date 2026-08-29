@@ -6,7 +6,7 @@ export const accountFormSchema = z.object({
   name: z.string().trim().min(1, "Escribe un nombre.").max(80, "Usa máximo 80 caracteres."),
   type: z.enum(accountTypes),
   currency: z.enum(["MXN", "USD", "EUR"]),
-  opening_balance: z.string().trim().min(1, "Escribe el saldo inicial."),
+  opening_balance: z.string().trim().min(1, "Escribe el saldo para empezar."),
   institution: z.string().trim().max(100, "Usa máximo 100 caracteres."),
   last4: z.string().trim().refine((value) => value === "" || /^\d{4}$/.test(value), "Escribe exactamente 4 dígitos."),
 });

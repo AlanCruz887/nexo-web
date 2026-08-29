@@ -44,12 +44,12 @@ export function ProfileForm({ currencies, isPending, onSubmit, profile, submitLa
       <FormField error={form.formState.errors.full_name?.message} id="full_name" label="Nombre">
         <Input autoComplete="name" id="full_name" {...form.register("full_name")} />
       </FormField>
-      <FormField error={form.formState.errors.base_currency?.message} hint="Solo organiza la presentación; Nexo no inventará conversiones." id="base_currency" label="Moneda base">
+      <FormField error={form.formState.errors.base_currency?.message} hint="Será la moneda principal de tus resúmenes. Las demás se mostrarán por separado." id="base_currency" label="Moneda principal">
         <Select id="base_currency" {...form.register("base_currency")}>
           {currencies.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} · {currency.name}</option>)}
         </Select>
       </FormField>
-      <FormField error={form.formState.errors.timezone?.message} hint="Se usa para interpretar fechas financieras sin cambiar su día." id="timezone" label="Zona horaria">
+      <FormField error={form.formState.errors.timezone?.message} hint="Ayuda a mostrar las fechas en tu horario local." id="timezone" label="Zona horaria">
         <Select id="timezone" {...form.register("timezone")}>
           {timezoneOptions.map((timezone) => <option key={timezone} value={timezone}>{timezone}</option>)}
         </Select>

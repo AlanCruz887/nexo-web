@@ -43,7 +43,7 @@ export function OnboardingPage() {
         </div>
         <p className="text-sm font-semibold text-primary">Bienvenido a Nexo</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Empecemos por lo esencial</h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Solo necesitamos tu nombre, moneda base y zona horaria. Las cuentas y tarjetas llegarán en sus fases correspondientes.</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Solo necesitamos tu nombre, la moneda que usas principalmente y tu zona horaria. Después podrás agregar cuentas y tarjetas.</p>
         <div className="mt-8">
           <ProfileForm currencies={currencies.data ?? []} isPending={updateProfile.isPending} onSubmit={handleSubmit} profile={profile.data} submitLabel="Entrar a Nexo" />
         </div>

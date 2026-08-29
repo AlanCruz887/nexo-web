@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { movementDraftFromActivity } from "@/lib/movement-draft";
-import type { AccountActivity } from "@/types/database";
+import type { FinancialActivity } from "@/types/database";
 
-const movement: AccountActivity = {
+const movement: FinancialActivity = {
   event_id: "11111111-1111-1111-1111-111111111111",
   user_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   kind: "expense",
@@ -16,11 +16,19 @@ const movement: AccountActivity = {
   notes: "Compra semanal",
   created_at: "2026-08-20T18:00:00Z",
   account_id: "22222222-2222-2222-2222-222222222222",
-  account_delta_minor: "-145000",
-  account_name: "Santander",
-  account_type: "checking",
+  source_type: "account",
+  card_id: null,
+  source_name: "Santander",
+  source_detail: "Santander",
   currency: "MXN",
-  account_is_active: true,
+  signed_amount_minor: "-145000",
+  payment_method: null,
+  statement_date: null,
+  related_event_id: null,
+  source_is_active: true,
+  source_account_id: null,
+  source_account_name: null,
+  destination_account_id: null,
 };
 
 describe("movement draft", () => {
@@ -33,6 +41,9 @@ describe("movement draft", () => {
       occurred_on: "2026-08-27",
       description: "Supermercado",
       notes: "Compra semanal",
+      purchase_scope: "self",
+      personal_amount: "1450.00",
+      allocations: [],
     });
   });
 

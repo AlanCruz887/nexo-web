@@ -4,7 +4,11 @@
 
 Cada fase termina con software verificable y documentación actualizada. No se inicia la siguiente si fallan invariantes financieras, aislamiento RLS o reconstrucción de saldos. Las fases agregan capacidades sobre el mismo núcleo; no crean modelos paralelos para cuentas, tarjetas, personas o reportes.
 
-Estado actual: **Fase 3A completada y verificada. Fase 3B no iniciada y requiere autorización explícita.**
+Estado actual: **Fase 4B completada: MSI nuevos e históricos personales. Personas no iniciada.**
+
+Corrección posterior verificada: cierre cronológico de statements, saldo por periodo y bloqueo de cierres anticipados.
+
+Corrección posterior verificada: pagos anticipados derivados por ciclo, aplicación al cierre sin doble impacto y pago mínimo nulo sin valor inventado.
 
 ## 2. Secuencia recomendada
 
@@ -95,7 +99,7 @@ Alcance implementado:
 
 No incluye compras productivas de tarjeta, pagos desde cuentas, refunds, MSI, personas ni receivables.
 
-### Fase 3B — Personas, compras compartidas y receivables
+### Fase 4 — Personas, compras compartidas y receivables
 
 Objetivo: implementar la diferenciación que define a Nexo.
 
@@ -117,21 +121,23 @@ Verificación:
 - pago parcial conserva pendiente y sobrepago conserva `credit_balance` sin crear ingreso;
 - entidades archivadas conservan historial y salen de selectores.
 
-### Fase posterior — Compras y pagos de tarjeta — No iniciada
+### Fase 3B — Compras, pagos y reembolsos de tarjeta — Completada
 
 Objetivo: agregar operaciones productivas al motor de tarjeta ya implementado sin confundirlas con cuentas.
 
-Alcance:
+Alcance implementado:
 
-- cargos personales/terceros/compartidos en tarjeta;
-- pagos de tarjeta y asignación a statements;
-- desglose completo del saldo;
-- comparativa inicial de tarjetas.
+- compras personales con categoría, fecha, método de pago y asignación al ciclo central;
+- pagos atómicos desde cuentas de la misma moneda y asignación oldest-first a statements;
+- reembolsos parciales, opcionalmente vinculados a la compra original;
+- edición/reversión segura, actividad global de cuentas/tarjetas y filtros por origen;
+- ledger firmado, RLS, idempotencia y auditoría de todas las operaciones.
 
 Reglas ya cerradas para esta fase:
 
 - reutiliza el motor de ciclos, baseline y statements de Fase 3A;
-- pagos pre-baseline pueden guardarse como evidencia no-impacting.
+- estados cerrados no se reescriben: una compra/reembolso de ese ciclo exige corrección posterior;
+- el excedente de pago permanece como saldo a favor de tarjeta mediante saldo utilizado negativo.
 
 Verificación:
 
@@ -139,23 +145,25 @@ Verificación:
 - baseline sin duplicidad;
 - pago de tarjeta no es gasto;
 - las tres métricas de tarjeta cuadran y se explican;
-- pago histórico no-impacting no altera saldo;
-- cierre concurrente de un ciclo ocurre una sola vez.
+- pago y su reversión restauran de forma coordinada cuenta, tarjeta y `remaining_due`;
+- reembolso reduce gasto personal neto y nunca crea ingreso.
 
-### Fase 5 — MSI nuevos e históricos
+### Fases 4A–4B — MSI nuevos e históricos personales (completada)
 
 Objetivo: agregar planes sin duplicar deuda o gasto.
 
 Alcance:
 
-- MSI personal, de terceros y compartido;
+- MSI personal nuevo e histórico;
 - plazos estándar y personalizados;
 - calendario y redondeo determinista;
 - `installment_amount` real y última cuota ajustable a principal exacto;
 - importación manual de MSI ya iniciado;
 - pago real reportado separado del principal pagado;
-- `paid_before_import`;
-- integración con baseline, statements, receivables y pagos.
+- `paid_before_nexo`;
+- integración con baseline, statements y pagos.
+
+MSI de terceros/compartidos y su integración con receivables permanecen fuera de alcance hasta Personas.
 
 Verificación:
 
@@ -368,6 +376,16 @@ Estas pruebas se agregan en la primera fase donde exista la entidad necesaria y 
 21. el invariante `purchase_amount = personal_amount + third_party_allocations` se exige en compras y no se aplica indebidamente a otros tipos de evento;
 22. una compra MSI nueva impacta el principal de tarjeta una sola vez y sus cuotas no vuelven a sumar el mismo principal.
 
-## 9. Condición para iniciar Fase 3B
+## 9. Estado después de Fase 4B
 
-La Fase 3B empieza únicamente después de autorización expresa. Hasta entonces no se crean personas, receivables, compras compartidas ni modelos parciales de fases posteriores.
+Fases 4A–4B implementan compras MSI nuevas y la importación controlada de MSI personales ya iniciados: plan, calendario proyectado, pago histórico reportado separado del principal amortizado, integración incluido/no incluido con saldo inicial, statements, UI, reversión, auditoría, idempotencia y RLS. Personas, receivables, MSI de terceros/compartidos, presupuestos y conciliación siguen sin iniciar.
+
+Tests permanentes incorporados: 3/6/12 MSI, mensualidad real, residuo en última cuota, límite de corte, primera mensualidad, importación 5 de 12, cuotas pagadas antes de Nexo, saldo inicial incluido/no incluido, gasto personal único, saldo/disponible sin doble conteo, progreso por statement pagado, pago parcial/completo, reversión dedicada, idempotencia y aislamiento A/B.
+
+## 10. Estado después de Fase 5A
+
+Implementado: personas activas/archivadas; compras personales, para otra persona o repartidas entre varias; receivables nominales por moneda; pagos parciales aplicados FIFO al saldo más antiguo; reversión, idempotencia, auditoría y RLS. La compra conserva un único impacto financiero en su cuenta o tarjeta, mientras `personal_amount` y las asignaciones determinan gasto personal y cuentas por cobrar.
+
+Pruebas permanentes incorporadas: invariante de distribución exacta, compra para tercero sin gasto personal, varias personas, pago parcial FIFO, cobro sin ingreso, conservación de patrimonio económico, bloqueo de sobrepago, reversión de cobro, idempotencia y aislamiento A/B.
+
+Pendiente para 5B o fases autorizadas: MSI de terceros/compartidos, periodos mensuales de cobro, estado compartible, saldo a favor por sobrepago, recordatorios y automatización.

@@ -5,7 +5,8 @@ import { parseMoneyInput, serializeMoneyMinor } from "@/lib/money";
 import type { MovementFormInput, TransferFormInput } from "@/schemas/movement";
 import { categoryService } from "@/services/category-service";
 import { movementService, type MovementFilters } from "@/services/movement-service";
-import type { AccountActivity, Category } from "@/types/database";
+import type { Category, FinancialActivity } from "@/types/database";
+import { resolvePurchaseSplit } from "@/lib/purchase-split";
 
 export const transactionsQueryKey = (filters: MovementFilters) => ["transactions", filters] as const;
 export const accountTransactionsQueryKey = (accountId: string, filters: MovementFilters) => ["account-transactions", accountId, filters] as const;
@@ -44,6 +45,10 @@ function useInvalidateFinancialData() {
     queryClient.invalidateQueries({ queryKey: ["transactions"] }),
     queryClient.invalidateQueries({ queryKey: ["account-transactions"] }),
     queryClient.invalidateQueries({ queryKey: ["transaction"] }),
+    queryClient.invalidateQueries({ queryKey: ["contacts"] }),
+    queryClient.invalidateQueries({ queryKey: ["contact"] }),
+    queryClient.invalidateQueries({ queryKey: ["contact-receivables"] }),
+    queryClient.invalidateQueries({ queryKey: ["contact-activity"] }),
   ]);
 }
 
@@ -69,17 +74,17 @@ export function useUpdateMovement(eventId: string) {
       createIdempotencyKey("transaction:update"),
     ),
     onSuccess: (updatedEventId, input) => {
-      const previous = queryClient.getQueryData<AccountActivity[]>(transactionQueryKey(eventId));
+      const previous = queryClient.getQueryData<FinancialActivity[]>(transactionQueryKey(eventId));
       const categories = queryClient.getQueryData<Category[]>(["categories"]);
       if (previous?.length) {
         const amountMinor = serializeMoneyMinor(parseMoneyInput(input.amount));
         const categoryName = categories?.find((category) => category.id === input.category_id)?.name ?? previous[0]?.category_name ?? null;
-        queryClient.setQueryData<AccountActivity[]>(transactionQueryKey(updatedEventId), previous.map((activity) => ({
+        queryClient.setQueryData<FinancialActivity[]>(transactionQueryKey(updatedEventId), previous.map((activity) => ({
           ...activity,
           event_id: updatedEventId,
           amount_minor: amountMinor,
-          personal_amount_minor: activity.kind === "expense" ? amountMinor : "0",
-          account_delta_minor: activity.kind === "expense" ? `-${amountMinor}` : amountMinor,
+          personal_amount_minor: activity.kind === "expense" ? resolvePurchaseSplit(input).personalAmountMinor : "0",
+          signed_amount_minor: activity.kind === "expense" ? `-${amountMinor}` : amountMinor,
           description: input.description,
           category_id: input.category_id,
           category_name: categoryName,
@@ -95,6 +100,10 @@ export function useUpdateMovement(eventId: string) {
         queryClient.invalidateQueries({ queryKey: ["transactions"] }),
         queryClient.invalidateQueries({ queryKey: ["account-transactions"] }),
         queryClient.invalidateQueries({ queryKey: transactionQueryKey(updatedEventId) }),
+        queryClient.invalidateQueries({ queryKey: ["contacts"] }),
+        queryClient.invalidateQueries({ queryKey: ["contact"] }),
+        queryClient.invalidateQueries({ queryKey: ["contact-receivables"] }),
+        queryClient.invalidateQueries({ queryKey: ["contact-activity"] }),
       ]);
     },
   });

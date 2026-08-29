@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { transactionQueryKey, useMovement, useUpdateMovement } from "@/hooks/use-movements";
 import { movementService } from "@/services/movement-service";
-import type { AccountActivity, Category } from "@/types/database";
+import type { Category, FinancialActivity } from "@/types/database";
 
 vi.mock("@/services/movement-service", () => ({
   movementService: {
@@ -16,7 +16,7 @@ vi.mock("@/services/movement-service", () => ({
 
 const originalEventId = "11111111-1111-1111-1111-111111111111";
 const updatedEventId = "22222222-2222-2222-2222-222222222222";
-const original: AccountActivity = {
+const original: FinancialActivity = {
   event_id: originalEventId,
   user_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
   kind: "expense",
@@ -29,11 +29,19 @@ const original: AccountActivity = {
   notes: null,
   created_at: "2026-08-20T18:00:00Z",
   account_id: "33333333-3333-3333-3333-333333333333",
-  account_delta_minor: "-150000",
-  account_name: "Santander",
-  account_type: "checking",
+  source_type: "account",
+  card_id: null,
+  source_name: "Santander",
+  source_detail: "Santander",
   currency: "MXN",
-  account_is_active: true,
+  signed_amount_minor: "-150000",
+  payment_method: null,
+  statement_date: null,
+  related_event_id: null,
+  source_is_active: true,
+  source_account_id: null,
+  source_account_name: null,
+  destination_account_id: null,
 };
 
 function createWrapper(queryClient: QueryClient) {
@@ -59,7 +67,7 @@ describe("movement edit cache handoff", () => {
       event_id: updatedEventId,
       amount_minor: "120000",
       personal_amount_minor: "120000",
-      account_delta_minor: "-120000",
+      signed_amount_minor: "-120000",
       description: "Supermercado semanal",
       category_id: "transport",
       category_name: "Transporte",
@@ -75,12 +83,15 @@ describe("movement edit cache handoff", () => {
     const mutation = renderHook(() => useUpdateMovement(originalEventId), { wrapper });
     const input = {
       amount: "1200.00",
-      account_id: original.account_id,
+      account_id: original.account_id as string,
       kind: "expense" as const,
       category_id: "transport",
       occurred_on: "2026-08-27",
       description: "Supermercado semanal",
       notes: "Editado",
+      purchase_scope: "self" as const,
+      personal_amount: "1200.00",
+      allocations: [],
     };
 
     let replacementId: string | undefined;
@@ -89,10 +100,10 @@ describe("movement edit cache handoff", () => {
     });
 
     expect(replacementId).toBe(updatedEventId);
-    expect(queryClient.getQueryData<AccountActivity[]>(transactionQueryKey(updatedEventId))?.[0]).toMatchObject({
+    expect(queryClient.getQueryData<FinancialActivity[]>(transactionQueryKey(updatedEventId))?.[0]).toMatchObject({
       event_id: updatedEventId,
       amount_minor: "120000",
-      account_delta_minor: "-120000",
+      signed_amount_minor: "-120000",
       description: "Supermercado semanal",
       category_id: "transport",
       category_name: "Transporte",

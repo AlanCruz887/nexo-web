@@ -12,6 +12,9 @@ describe("movement schemas", () => {
       occurred_on: "2026-08-27",
       description: "Supermercado",
       notes: "",
+      purchase_scope: "self",
+      personal_amount: "1450.00",
+      allocations: [],
     });
     expect(result.success).toBe(true);
   });

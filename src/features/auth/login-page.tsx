@@ -30,7 +30,7 @@ export function LoginPage() {
   return (
     <AuthCard
       description="Tu espacio privado para construir claridad financiera, una fase a la vez."
-      footer={<>¿Aún no tienes cuenta? <Link className="font-medium text-primary hover:underline" to="/registro">Crear cuenta</Link></>}
+      footer={<>¿Aún no tienes cuenta? <Link className="-mx-2 inline-flex min-h-11 items-center px-2 font-medium text-primary hover:underline" to="/registro">Crear cuenta</Link></>}
       title="Bienvenido de vuelta"
     >
       <form className="space-y-4" onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>
@@ -45,7 +45,7 @@ export function LoginPage() {
           {form.formState.isSubmitting ? "Entrando…" : "Iniciar sesión"}
         </Button>
         <div className="text-center">
-          <Link className="text-sm font-medium text-primary hover:underline" to="/recuperar-contrasena">Olvidé mi contraseña</Link>
+          <Link className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-primary hover:underline" to="/recuperar-contrasena">Olvidé mi contraseña</Link>
         </div>
       </form>
     </AuthCard>

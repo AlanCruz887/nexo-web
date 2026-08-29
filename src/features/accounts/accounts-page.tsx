@@ -42,7 +42,7 @@ export function AccountsPage() {
   return (
     <PageTransition>
       <div className="space-y-12">
-        <PageHeader actions={<Button onClick={() => setAccountFormOpen(true)}><Plus className="size-4" />Agregar cuenta</Button>} eyebrow="Tu dinero" subtitle="Saldos reconstruidos desde movimientos, sin conversiones automáticas." title="Cuentas" />
+        <PageHeader actions={<Button onClick={() => setAccountFormOpen(true)}><Plus className="size-4" />Agregar cuenta</Button>} eyebrow="Tu dinero" subtitle="Consulta cuánto tienes disponible en cada cuenta." title="Cuentas" />
 
         {allAccounts.length === 0 ? (
           <EmptyState action={<Button onClick={() => setAccountFormOpen(true)}>Agregar cuenta</Button>} description="Agrega tu primera cuenta para empezar a registrar movimientos." title="Todavía no tienes cuentas" />
@@ -55,7 +55,7 @@ export function AccountsPage() {
                   <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-2">
                     {totalEntries.map(([currency, amount]) => <MoneyValue key={currency} amount={amount ?? 0n} className="block text-[clamp(2.6rem,6vw,4.8rem)] leading-none tracking-[-0.06em]" currency={currency as AccountBalance["currency"]} />)}
                   </div>
-                  {totalEntries.length > 1 ? <p className="mt-3 text-xs text-muted-foreground">Totales separados por moneda. Nexo no inventa tipos de cambio.</p> : null}
+                  {totalEntries.length > 1 ? <p className="mt-3 text-xs text-muted-foreground">Las monedas se muestran por separado y no se suman entre sí.</p> : null}
                 </div>
                 <Button disabled={activeAccounts.length < 2} onClick={() => setTransferOpen(true)} variant="secondary"><ArrowLeftRight className="size-4" />Transferir</Button>
               </div>

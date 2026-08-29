@@ -34,7 +34,7 @@ export function RegisterPage() {
   return (
     <AuthCard
       description="Crea tu acceso. La configuración financiera comienza después del fundamento inicial."
-      footer={<>¿Ya tienes cuenta? <Link className="font-medium text-primary hover:underline" to="/login">Iniciar sesión</Link></>}
+      footer={<>¿Ya tienes cuenta? <Link className="-mx-2 inline-flex min-h-11 items-center px-2 font-medium text-primary hover:underline" to="/login">Iniciar sesión</Link></>}
       title="Crear cuenta"
     >
       <form className="space-y-4" onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>

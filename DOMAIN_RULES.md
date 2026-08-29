@@ -361,3 +361,81 @@ La clave se identifica de forma única por `(user_id, idempotency_key)`. El regi
 - Estado persistido: `closed` mientras `remaining_due > 0`, `paid` cuando llega a cero. `open` está reservado por el contrato, pero el ciclo abierto actual es una proyección.
 - Sobrepago puede producir saldo utilizado negativo y disponible superior al límite. Fase 3A lo muestra sin inventar una clasificación; su aplicación operativa queda para la fase de pagos.
 - La automatización futura podrá invocar el mismo RPC idempotente de cierre. Fase 3A no incluye cron ni Edge Function.
+
+## 28. Operaciones de tarjeta en Fase 3B
+
+- Una compra simple crea un evento `card_charge` con `personal_amount_minor = amount_minor` y una entrada positiva de tarjeta. No crea entrada bancaria.
+- La fecha de statement se obtiene exclusivamente con `card_statement_for_date(transaction_date, statement_day)`. Editar fecha o tarjeta revierte y reemplaza el evento, por lo que el ciclo se recalcula en backend.
+- Una operación impactante requiere `transaction_date >= card_baselines.baseline_date`. Antes de esa fecha podría duplicar deuda incluida en el saldo inicial y se rechaza. La UI lo explica como “Controlada en Nexo desde”, sin exponer jerga de baseline.
+- Fase 3B no ofrece todavía “Registrar solo como historial”: aunque el ledger conoce `historical_non_impacting`, no se convierte una compra normal a histórica de forma implícita ni se expone un flujo incompleto.
+- Una compra o reembolso cuyo statement correspondiente ya está cerrado no se edita ni revierte silenciosamente. Se exige una corrección/reembolso posterior que preserve el snapshot.
+- Un pago crea, atómicamente, una entrada negativa en la cuenta origen y otra negativa en la tarjeta. `personal_amount_minor = 0`; no es ingreso ni gasto.
+- Los pagos se asignan primero a statements pendientes por `payment_due_date` y luego `statement_date`, del más antiguo al más reciente. Cada aplicación es una entrada firmada e inmutable.
+- Revertir un pago restaura cuenta, saldo de tarjeta y cada `remaining_due` afectado en la misma transacción.
+- El importe de pago que excede todos los statements pendientes no se pierde: queda como crédito no asignado y puede producir saldo utilizado negativo/disponible superior al límite.
+- Un reembolso crea `card_refund`, una entrada negativa de tarjeta y reduce gasto personal neto por su `personal_amount_minor`; nunca crea un evento `income`.
+- Los reembolsos vinculados acumulados no pueden exceder la compra original. Un reembolso sin vínculo explícito sigue siendo un crédito auditable de tarjeta.
+- Saldo utilizado sigue siendo una sola fórmula: baseline + compras impactantes - pagos - reembolsos +/- reversiones y ajustes.
+- `financial_activity` es la fuente compartida del timeline global. Mantiene `source_type`, cuenta/tarjeta, categoría, importe firmado y contexto; ninguna pantalla reclasifica pagos como gasto.
+- El filtro Origen tiene tres estados exclusivos: Todos, Cuentas y Tarjetas. El selector contextual solo existe para Cuentas o Tarjetas; cambiar de origen limpia el identificador incompatible.
+- Instrumentos archivados permanecen en el timeline histórico, pero no aparecen en selectores operativos. Un control explícito “Incluir archivadas” puede incorporarlos a filtros históricos, agrupados y etiquetados.
+
+## 29. Cierre cronológico de estados
+
+- El cierre normal selecciona siempre el corte vencido más antiguo que todavía no tenga statement, comenzando después de `card_baselines.baseline_date`.
+- Un corte solo es elegible cuando su fecha efectiva es menor o igual a la fecha actual. El ciclo abierto nunca puede cerrarse anticipadamente mediante el flujo normal.
+- Cerrar un statement habilita cronológicamente el siguiente corte vencido; no se permiten huecos ni cierres fuera de orden.
+- `statement_balance_minor` no usa el saldo utilizado total de la tarjeta. Se calcula con la contribución del baseline únicamente cuando el baseline pertenece a ese primer ciclo, más cargos, reembolsos y ajustes impactantes del intervalo semiabierto `[cycle_start, statement_date)`.
+- Pagos de tarjeta no forman parte del acumulado de compras del ciclo. La deuda no pagada de un statement anterior permanece en el `remaining_due_minor` de ese statement y no se duplica como principal dentro del statement siguiente.
+- Movimientos revertidos no participan en el saldo preliminar ni en el snapshot cerrado.
+
+## 30. Pagos anticipados de tarjeta
+
+- Para cada pago, `applied_amount_minor` es la suma realmente asignada a statements cerrados y `advance_amount_minor = payment_amount_minor - applied_amount_minor`.
+- Si no existe deuda cerrada pendiente, el pago completo es anticipado. Si solo una parte cubre deuda cerrada, únicamente el excedente es anticipado.
+- Mientras el statement futuro no exista, el pago anticipado no tiene `statement_id`. Su asociación visual se deriva de `transaction_date` con el motor central y apunta al ciclo abierto/próxima fecha de corte.
+- Compras netas del ciclo = compras − reembolsos. Los pagos anticipados se muestran separados y no reducen esta métrica.
+- Impacto neto del ciclo = compras − reembolsos − pagos anticipados. El saldo utilizado sigue siendo la proyección global del ledger, no esta métrica visual.
+- Al cerrar el ciclo, el RPC asigna los anticipos disponibles del periodo al nuevo statement sin crear eventos ni entradas financieras adicionales. El statement conserva `statement_balance`, `amount_paid` y `remaining_due` por separado.
+- Un `minimum_payment_minor` no proporcionado permanece `NULL` y se muestra como “No registrado”; nunca se sustituye automáticamente por el saldo completo.
+
+## 31. Compras nuevas a MSI — Fase 4A
+
+- Una compra nueva a MSI crea exactamente un evento `card_charge` y una entrada impactante por el principal completo. `installment_plans` e `installments` tienen impacto adicional de tarjeta igual a cero.
+- El gasto personal se reconoce una sola vez en la compra por `personal_amount_minor = original_amount_minor`; una mensualidad no vuelve a crear gasto.
+- La primera mensualidad pertenece al primer statement que contiene `transaction_date`, calculado por `card_statement_for_date`. El día efectivo de corte comienza el siguiente statement.
+- Las mensualidades siguientes avanzan por meses calendario y cada fecha usa `card_effective_statement_date`, incluida la regla de último día válido para cortes 29–31.
+- El importe regular se calcula con división entera en unidades menores o conserva la mensualidad real ingresada. La última mensualidad absorbe el residuo y la suma es exactamente el principal; ninguna cuota puede ser cero o negativa.
+- Los statements futuros no se crean por anticipado. `due_statement_date` es una proyección; al cerrar un statement, su balance incluye la mensualidad programada y excluye el cargo principal MSI completo.
+- El progreso no avanza por fecha. Una mensualidad se considera pagada únicamente cuando su statement existe y queda `paid` mediante pagos normales de tarjeta.
+- Un pago parcial que deja `remaining_due_minor > 0` no cubre ninguna mensualidad MSI del statement para efectos de progreso. Cuando los pagos reales llevan el statement completo a `remaining_due_minor = 0`, sus mensualidades pasan a pagadas. No existe un comando ni un evento “pagar mensualidad”.
+- Estados visibles del cronograma: `futura` cuando el statement aún no existe, `pendiente` cuando existe y conserva saldo, `pagada` cuando el statement quedó cubierto y `revertida` cuando se revirtió el plan. Los nombres internos de persistencia no se exponen.
+- El saldo utilizado sigue derivándose del baseline y las entradas impactantes. No suma `remaining_principal` del plan porque ese principal ya vive en el cargo original.
+- Solo descripción, categoría y notas se editan mediante revisiones de metadata. Principal, tarjeta, fecha y plazo son inmutables; cambiarlos exige reversión y una compra nueva.
+- La reversión MSI es dedicada y atómica: crea la entrada opuesta al cargo completo, marca el plan `reversed` y cancela sus mensualidades futuras. Si existe un statement relacionado ya cerrado, se bloquea para exigir una corrección explícita.
+- Fase 4A bloquea reembolsos vinculados a MSI. No redistribuye mensualidades sin una política de dominio aprobada.
+- MSI de terceros y compras compartidas permanecen fuera de alcance hasta fases autorizadas.
+
+## 32. MSI ya empezados / históricos — Fase 4B
+
+- Un plan importado se identifica con `origin = historical`. No crea compras, pagos bancarios ni gasto personal retroactivos; su evento de importación usa `personal_amount_minor = 0`.
+- Si el usuario indica que va en la mensualidad `X`, se deriva `paid_before_nexo_count = X - 1`. Esas cuotas se conservan como `paid_before_nexo`; la cuota `X` queda pendiente o futura según su statement y las posteriores quedan futuras.
+- `remaining_principal_minor = original_amount_minor - principal_paid_before_nexo_minor`. Nunca se deriva como mensualidades restantes por mensualidad reportada.
+- `reported_paid_amount_minor` conserva el dinero real reportado por el banco y puede diferir de `principal_paid_before_nexo_minor`; ambos datos son independientes.
+- La mensualidad reportada se conserva en `reported_amount_minor`. El principal asignado a las cuotas usa unidades menores exactas y ajusta la última para cerrar el principal sin alterar el valor reportado.
+- Si `included_in_opening_balance = true`, el principal pendiente ya vive en el baseline y el efecto adicional es cero. Si es `false`, se crea una sola entrada impactante por el principal pendiente. Nunca se agrega el importe original completo ni se vuelve a sumar cada mensualidad.
+- El statement proyectado incorpora la mensualidad reportada correspondiente. Para un plan incluido en el saldo inicial, su integración con el primer statement administrado sustituye esa porción del baseline por la mensualidad exigible, sin duplicar principal ni producir un segundo impacto en saldo utilizado.
+- Las mensualidades pagadas antes de Nexo no avanzan por movimientos ficticios. Desde la importación, el progreso de las cuotas actuales y futuras depende exclusivamente de que el statement real quede completamente cubierto; un pago parcial no marca la cuota como pagada.
+- Solo descripción, categoría y notas admiten edición directa auditable. Corregir importe, plazo, avance, principal pagado o inclusión en saldo inicial exige revertir la importación y crear una nueva.
+- Revertir un MSI histórico cancela su cronograma y revierte únicamente su impacto adicional: cero si estaba incluido en el saldo inicial o el principal pendiente si no estaba incluido. El baseline nunca se reescribe.
+
+## 33. Personas y receivables — Fase 5A
+
+- Solo una compra distribuida cumple `purchase_amount = personal_amount + sum(third_party_allocations)`. La regla no se aplica globalmente a pagos, cobros, transferencias, reembolsos, ajustes ni saldos iniciales.
+- Una compra puede tener cero, una o varias asignaciones a personas. La cuenta o tarjeta recibe el impacto completo una sola vez; las asignaciones no duplican el movimiento financiero.
+- `personal_amount` es la única parte que alimenta gasto personal. Cada asignación crea un receivable nominal en la moneda de la fuente financiera.
+- El pendiente se deriva de entradas inmutables: cargo positivo, pago negativo y reversión compensatoria. No se edita como saldo almacenado.
+- Un pago de persona aumenta la cuenta receptora y reduce receivables en la misma moneda, del más antiguo al más reciente. No es ingreso, gasto ni cambia patrimonio: banco `+X`, receivable `-X`.
+- Los pagos parciales conservan el pendiente exacto. En Fase 5A se bloquea un importe superior al saldo pendiente; `credit_balance` se implementará únicamente en una fase posterior.
+- Una compra distribuida con pagos aplicados no puede editarse ni revertirse con el flujo simple de 5A. Se exige un flujo futuro que reasigne o revierta los cobros sin perder trazabilidad.
+- Archivar una persona impide asignarle compras nuevas, pero conserva historial, receivables y posibilidad de registrar cobros pendientes.

@@ -1,4 +1,5 @@
 import { format, isValid, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 export type FinancialDate = string;
 export type AuditTimestamp = string;
@@ -17,7 +18,7 @@ export function formatFinancialDate(
   value: FinancialDate,
   pattern = "dd/MM/yyyy",
 ): string {
-  return format(parseISO(parseFinancialDate(value)), pattern);
+  return format(parseISO(parseFinancialDate(value)), pattern, { locale: es });
 }
 
 export function parseAuditTimestamp(value: string): Date {
@@ -32,7 +33,7 @@ export function formatAuditTimestamp(
   value: AuditTimestamp,
   pattern = "dd/MM/yyyy HH:mm",
 ): string {
-  return format(parseAuditTimestamp(value), pattern);
+  return format(parseAuditTimestamp(value), pattern, { locale: es });
 }
 
 export function getBrowserTimezone(): string {

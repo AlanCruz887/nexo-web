@@ -1,11 +1,12 @@
 import { format } from "date-fns";
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, SlidersHorizontal } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CreditCard, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { MoneyValue } from "@/components/money-value";
 import { motionTokens } from "@/design-system/motion";
 import { cn } from "@/lib/cn";
-import type { AccountActivity } from "@/types/database";
+import { formatFinancialDate } from "@/lib/dates";
+import type { FinancialActivity } from "@/types/database";
 
 function dayLabel(date: string) {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -15,8 +16,8 @@ function dayLabel(date: string) {
   return new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 }
 
-export function MovementList({ movements, onSelect }: { movements: AccountActivity[]; onSelect: (eventId: string) => void }) {
-  const groups = movements.reduce<Map<string, AccountActivity[]>>((result, movement) => {
+export function MovementList({ movements, onSelect }: { movements: FinancialActivity[]; onSelect: (eventId: string) => void }) {
+  const groups = movements.reduce<Map<string, FinancialActivity[]>>((result, movement) => {
     const group = result.get(movement.occurred_on) ?? [];
     group.push(movement);
     result.set(movement.occurred_on, group);
@@ -28,7 +29,7 @@ export function MovementList({ movements, onSelect }: { movements: AccountActivi
         <section key={date}>
           <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{dayLabel(date)}</h3>
           <div className="divide-y divide-border/60">
-            {items.map((movement, index) => <MovementRow key={`${movement.event_id}-${movement.account_id}`} index={index} movement={movement} onClick={() => onSelect(movement.event_id)} />)}
+            {items.map((movement, index) => <MovementRow key={movement.event_id} index={index} movement={movement} onClick={() => onSelect(movement.event_id)} />)}
           </div>
         </section>
       ))}
@@ -36,10 +37,14 @@ export function MovementList({ movements, onSelect }: { movements: AccountActivi
   );
 }
 
-function MovementRow({ index, movement, onClick }: { index: number; movement: AccountActivity; onClick: () => void }) {
+function MovementRow({ index, movement, onClick }: { index: number; movement: FinancialActivity; onClick: () => void }) {
   const reduceMotion = useReducedMotion();
-  const isPositive = BigInt(movement.account_delta_minor) > 0n;
-  const Icon = movement.kind === "transfer" ? ArrowLeftRight : movement.kind === "income" ? ArrowDownLeft : movement.kind === "expense" ? ArrowUpRight : SlidersHorizontal;
+  const isPositive = BigInt(movement.signed_amount_minor) > 0n;
+  const isNeutral = movement.kind === "transfer" || movement.kind === "card_payment" || movement.kind === "person_payment";
+  const Icon = movement.kind === "transfer" ? ArrowLeftRight : movement.kind === "card_charge" ? CreditCard : movement.kind === "card_refund" ? RotateCcw : movement.kind === "card_payment" ? ArrowLeftRight : movement.kind === "income" ? ArrowDownLeft : movement.kind === "expense" ? ArrowUpRight : SlidersHorizontal;
+  const isInstallment = Boolean(movement.installment_plan_id);
+  const people = movement.third_party_allocations?.map((item) => item.contact_name).join(", ");
+  const kindLabel = movement.kind === "person_payment" ? "Pago recibido · no es ingreso" : movement.kind === "card_charge" ? movement.category_name ?? "Compra" : movement.kind === "card_payment" ? movement.payment_state === "advance" ? "Pago anticipado" : movement.payment_state === "mixed" ? "Pago parcialmente aplicado" : "Pago de tarjeta" : movement.kind === "card_refund" ? "Reembolso" : movement.kind === "transfer" ? "Transferencia" : movement.category_name ?? "Sin categoría";
   return (
     <motion.button
       animate={{ opacity: 1, y: 0 }}
@@ -49,12 +54,15 @@ function MovementRow({ index, movement, onClick }: { index: number; movement: Ac
       transition={{ delay: reduceMotion ? 0 : Math.min(index * 0.03, 0.15), duration: motionTokens.duration.normal, ease: motionTokens.ease.enter }}
       type="button"
     >
-      <span className={cn("grid size-10 place-items-center rounded-xl", movement.kind === "transfer" ? "bg-primary-soft text-primary" : isPositive ? "bg-success/10 text-success" : "bg-surface-secondary text-muted-foreground")}><Icon className="size-4.5" /></span>
+      <span className={cn("grid size-10 place-items-center rounded-xl", isNeutral || movement.source_type === "card" ? "bg-primary-soft text-primary" : isPositive ? "bg-success/10 text-success" : "bg-surface-secondary text-muted-foreground")}><Icon className="size-4.5" /></span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-foreground">{movement.description}</span>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{movement.kind === "transfer" ? "Transferencia" : movement.category_name ?? "Sin categoría"} · {movement.account_name}{!movement.account_is_active ? " · Archivada" : ""}</span>
+        {isInstallment ? <>
+          <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"><span className="shrink-0 rounded-md bg-primary-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">MSI</span><span className="truncate">{movement.installment_count} meses · <MoneyValue amount={movement.installment_amount_minor ?? "0"} currency={movement.currency} size="sm" />/mes</span></span>
+          <span className="mt-1 block truncate text-xs text-muted-foreground">{formatFinancialDate(movement.occurred_on, "dd MMM")} · {movement.source_name}{!movement.source_is_active ? " · Archivada" : ""}</span>
+        </> : <span className="mt-0.5 block truncate text-xs text-muted-foreground">{movement.source_name} · {kindLabel}{people ? ` · ${people}` : ""}{!movement.source_is_active ? " · Archivada" : ""}</span>}
       </span>
-      <MoneyValue amount={movement.account_delta_minor} className={cn("text-sm", isPositive ? "text-success" : movement.kind === "expense" ? "text-danger" : "text-foreground")} currency={movement.currency} sign="always" />
+      <MoneyValue amount={isNeutral ? movement.amount_minor : movement.signed_amount_minor} className={cn("text-sm", isNeutral ? "text-foreground" : isPositive ? "text-success" : "text-danger")} currency={movement.currency} sign={isNeutral ? "never" : "always"} />
     </motion.button>
   );
 }

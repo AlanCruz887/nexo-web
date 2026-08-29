@@ -58,14 +58,14 @@ export function SettingsPage() {
       <div className="max-w-4xl space-y-10">
         <PageHeader eyebrow="Tu cuenta" subtitle="Perfil, privacidad y preferencias de Nexo." title="Configuración" />
         <div className="divide-y divide-border/60 border-y border-border/60">
-          <section className="grid gap-6 py-8 md:grid-cols-[220px_1fr]"><div><h2 className="font-semibold">Perfil</h2><p className="mt-1 text-sm text-muted-foreground">Tu identidad y contexto financiero base.</p></div>
+          <section className="grid gap-6 py-8 md:grid-cols-[220px_1fr]"><div><h2 className="font-semibold">Perfil</h2><p className="mt-1 text-sm text-muted-foreground">Tu nombre, moneda principal y horario.</p></div>
             <form className="grid gap-5 sm:grid-cols-2" onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>
               <div className="sm:col-span-2">
               <FormField error={form.formState.errors.full_name?.message} id="full_name" label="Nombre">
                 <Input id="full_name" {...form.register("full_name")} />
               </FormField>
               </div>
-              <FormField error={form.formState.errors.base_currency?.message} id="base_currency" label="Moneda base">
+              <FormField error={form.formState.errors.base_currency?.message} id="base_currency" label="Moneda principal">
                 <Select id="base_currency" {...form.register("base_currency")}>
                   {(currencies.data ?? []).map((currency) => <option key={currency.code} value={currency.code}>{currency.code} · {currency.name}</option>)}
                 </Select>

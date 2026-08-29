@@ -127,6 +127,11 @@ Los MSI pueden ser personales, para otra persona o compartidos.
 - Si el día 29, 30 o 31 no existe en un mes, el corte efectivo es el último día válido de ese mes y ese día efectivo sigue perteneciendo al ciclo siguiente.
 - La fecha límite se deriva de `statement_date + payment_days_after_statement`.
 - Un statement cerrado es la fuente de verdad de `statement_balance`, `payment_to_avoid_interest`, `minimum_payment`, `amount_paid`, `remaining_due` y `payment_due_date`.
+- “Cerrar estado” propone el corte vencido pendiente más antiguo desde el inicio de control. Nunca propone ni permite cerrar anticipadamente el ciclo abierto.
+- El saldo del statement se obtiene de la actividad de su periodo y de la contribución inicial aplicable; no es sinónimo del saldo utilizado total de la tarjeta.
+- Un pago sin deuda cerrada pendiente se presenta como “Pago anticipado” y se asocia visualmente al próximo corte del ciclo, sin crear una relación con un statement inexistente.
+- La vista por estado separa compras, reembolsos, compras netas, pagos anticipados e impacto neto. La métrica principal se presenta como “Compras netas del ciclo”, no como saldo utilizado.
+- Si el banco no proporcionó pago mínimo, la interfaz muestra “No registrado”.
 - El pago de tarjeta reduce el activo bancario y el pasivo de tarjeta; no es gasto.
 - Un pago anterior al baseline puede conservarse como evidencia histórica sin volver a reducir el saldo Nexo.
 
@@ -229,6 +234,8 @@ Exportaciones PDF, Excel y CSV para tarjetas, cortes, personas, movimientos y re
 
 - Cuentas, tarjetas, categorías y personas con historial se archivan.
 - Las entidades archivadas no aparecen en selectores normales ni aceptan nuevos movimientos, pero preservan su historial.
+- En Movimientos, `Origen` separa Todos/Cuentas/Tarjetas. Solo Cuentas o Tarjetas muestran un selector contextual; archivadas requieren la opción explícita “Incluir archivadas”.
+- La configuración de tarjeta muestra “Controlada en Nexo desde”. Una compra anterior se rechaza con esa fecha real para evitar duplicar el saldo inicial; no existe conversión silenciosa a historial sin impacto.
 - Los eventos financieros asentados se revierten con un evento compensatorio; no se eliminan.
 - La auditoría registra `created`, `edited`, `reverted`, `archived` y `restored`.
 - Los registros de auditoría no son editables desde el frontend.
@@ -289,8 +296,16 @@ Nexo cumple su contrato cuando:
 
 ## 7. Estado de implementación
 
-Las Fases 1, 2 y 3A implementan el fundamento técnico, Auth, perfil, monedas, cuentas, movimientos simples, transferencias, tarjetas, baselines, ciclos y statements. Los saldos y métricas consumen proyecciones compartidas; la UI nunca edita un saldo calculado.
+Las Fases 1, 2, 3A, 3B, 4A, 4B y 5A implementan el fundamento técnico, Auth, perfil, monedas, cuentas, movimientos, tarjetas, MSI personales y personas con cuentas por cobrar. Los saldos y métricas consumen proyecciones compartidas; la UI nunca edita un saldo calculado.
 
-Las rutas productivas actuales incluyen `/cards` y `/cards/:id` junto con sus alias `/tarjetas`, además de las rutas de cuentas, movimientos, configuración y Auth. Tarjetas y cuentas mantienen ledgers distintos. Las tarjetas pueden archivarse/restaurarse y conservan baseline e historial de statements.
+Las rutas productivas actuales incluyen `/cards` y `/cards/:id` junto con sus alias `/tarjetas`, además de las rutas de cuentas, movimientos, configuración y Auth. Tarjetas y cuentas mantienen ledgers distintos. Compras, pagos y reembolsos aparecen en una actividad global unificada sin perder su origen.
 
-Continúan como contrato de diseño futuro, sin implementación parcial: compras productivas de tarjeta, pagos desde cuentas, refunds operativos, personas, receivables, MSI, presupuestos, planificación, salud, reportes, conciliación, importaciones y exportaciones. La Fase 3B no comienza sin autorización explícita.
+Continúan como contrato de diseño futuro, sin implementación parcial: MSI de terceros/compartidos, estados mensuales compartibles, sobrepagos y saldo a favor de personas, presupuestos, planificación, salud, reportes, conciliación, importaciones bancarias y exportaciones.
+
+En Fase 5A, Personas muestra saldos separados por moneda, compras asignadas y pagos. Una compra desde cuenta o tarjeta puede ser personal, para otra persona o compartida entre varias; la distribución debe cerrar exactamente contra el total. Registrar un pago exige una cuenta en la misma moneda, admite parcialidad, aplica primero a la deuda más antigua y nunca se presenta como ingreso. El sobrepago se bloquea hasta implementar saldo a favor.
+
+En Fase 4A, “Nueva compra” permite exhibición única o MSI de 2 a 60 meses, con opciones comunes 3/6/9/12/18/24. La UI presenta el cargo completo una vez en Movimientos, el plan y su progreso en la tarjeta, y cada mensualidad dentro del statement proyectado correspondiente. El detalle permite modificar solo metadata y ofrece una reversión MSI dedicada; los reembolsos vinculados quedan restringidos hasta aprobar su redistribución.
+
+El selector principal muestra únicamente 3/6/9/12/18/24 y “Personalizado”; el campo numérico de 2 a 60 aparece solo para esta última opción. El cronograma usa estados futura, pendiente, pagada y revertida. Un pago parcial del statement no marca una mensualidad como pagada; el progreso avanza al quedar cubierto el statement completo, sin crear un segundo movimiento financiero.
+
+En Fase 4B, “Agregar MSI existente” es un flujo separado que deriva las cuotas pagadas antes de Nexo desde la mensualidad actual. Conserva mensualidad bancaria, dinero reportado pagado y principal amortizado como datos distintos. Si el principal pendiente ya estaba incluido en el saldo inicial su impacto adicional es cero; de lo contrario agrega únicamente ese pendiente. La importación no crea compras, pagos ni gasto personal retroactivos. Las cuotas futuras se integran con los statements proyectados y solo avanzan mediante pagos reales de tarjeta.

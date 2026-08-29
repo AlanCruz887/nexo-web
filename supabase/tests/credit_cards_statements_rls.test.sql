@@ -60,7 +60,7 @@ begin
 
   current_payment_card := public.create_credit_card(
     'Pago actual', 'Nexo Bank', null, 'MXN', 5000000,
-    9, 20, null, 'nu', 'current_bank_balance', '2026-06-01',
+    9, 20, null, 'nu', 'current_bank_balance', '2026-07-09',
     0, null, null, 'phase3-create-current-payment'
   );
   after_statement_card := public.create_credit_card(
@@ -94,14 +94,14 @@ declare
 begin
   select phase3_ids.reference_card, phase3_ids.current_payment_card into reference_card, payment_card from phase3_ids;
   event_id := gen_random_uuid();
-  insert into public.financial_events(id, user_id, kind, amount_minor, description, occurred_on)
-  values (event_id, 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'card_charge', 500000, 'Cargo de referencia', '2026-08-10');
+  insert into public.financial_events(id, user_id, kind, amount_minor, personal_amount_minor, description, occurred_on)
+  values (event_id, 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'card_charge', 500000, 500000, 'Cargo de referencia', '2026-08-10');
   insert into public.card_entries(user_id, financial_event_id, card_id, amount_minor)
   values ('cccccccc-cccc-cccc-cccc-cccccccccccc', event_id, reference_card, 500000);
 
   event_id := gen_random_uuid();
-  insert into public.financial_events(id, user_id, kind, amount_minor, description, occurred_on)
-  values (event_id, 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'card_charge', 1000000, 'Estado cerrado', '2026-07-10');
+  insert into public.financial_events(id, user_id, kind, amount_minor, personal_amount_minor, description, occurred_on)
+  values (event_id, 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'card_charge', 1000000, 1000000, 'Estado cerrado', '2026-07-10');
   insert into public.card_entries(user_id, financial_event_id, card_id, amount_minor)
   values ('cccccccc-cccc-cccc-cccc-cccccccccccc', event_id, payment_card, 1000000);
 end;
@@ -156,8 +156,8 @@ begin
   insert into public.card_entries(user_id, financial_event_id, card_id, amount_minor)
   values ('cccccccc-cccc-cccc-cccc-cccccccccccc', event_id, payment_card, -300000);
   event_id := gen_random_uuid();
-  insert into public.financial_events(id, user_id, kind, amount_minor, description, occurred_on)
-  values (event_id, 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'card_charge', 500000, 'Ciclo abierto', '2026-08-11');
+  insert into public.financial_events(id, user_id, kind, amount_minor, personal_amount_minor, description, occurred_on)
+  values (event_id, 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'card_charge', 500000, 500000, 'Ciclo abierto', '2026-08-11');
   insert into public.card_entries(user_id, financial_event_id, card_id, amount_minor)
   values ('cccccccc-cccc-cccc-cccc-cccccccccccc', event_id, payment_card, 500000);
 end;
@@ -170,6 +170,7 @@ do $$
 declare
   payment_card uuid;
   reference_card uuid;
+  future_statement_date date;
 begin
   select current_payment_card, phase3_ids.reference_card into payment_card, reference_card from phase3_ids;
   if not exists (
@@ -177,19 +178,14 @@ begin
     where id = payment_card and used_balance_minor = 1200000
       and current_payment_minor = 700000 and open_cycle_accumulated_minor = 500000
   ) then raise exception 'used balance, current payment, and open cycle were mixed'; end if;
-  perform public.close_card_statement(payment_card, '2026-09-09', null, null, 'phase3-close-carried-balance');
-  if not exists (
-    select 1 from public.card_statements
-    where card_id = payment_card and statement_date = date '2026-09-09'
-      and statement_balance_minor = 1200000 and remaining_due_minor = 1200000
-  ) then raise exception 'new statement did not carry unpaid ledger balance'; end if;
-  if (select current_payment_minor from public.card_summaries where id = payment_card) <> 1200000 then
-    raise exception 'latest closed statement did not become current payment';
+  if public.card_statement_preview_balance(payment_card, '2026-09-09') <> 500000 then
+    raise exception 'statement preview mixed prior debt, payments, or used balance with cycle activity';
   end if;
+  future_statement_date := public.card_statement_for_date(current_date, 9);
   begin
-    perform public.close_card_statement(payment_card, '2026-09-09', null, null, 'phase3-close-duplicate-date');
-    raise exception 'duplicate card/date statement was accepted';
-  exception when unique_violation then null; end;
+    perform public.close_card_statement(payment_card, future_statement_date, null, null, 'phase3-close-future-date');
+    raise exception 'future statement was closed through the normal flow';
+  exception when invalid_parameter_value then null; end;
   perform public.update_credit_card(reference_card, 'Referencia editada', 'Nexo Bank', 'Reference', 11000000, 9, 20, '4821', 'generic', 'phase3-update-card');
   perform public.archive_credit_card(reference_card, 'phase3-archive-card');
   perform public.restore_credit_card(reference_card, 'phase3-restore-card');
@@ -212,7 +208,7 @@ declare
 begin
   card_b := public.create_credit_card(
     'Tarjeta B', 'Banco B', null, 'MXN', 1000000, 9, 20, null, 'generic',
-    'current_bank_balance', '2026-07-01', 0, null, null, 'phase3-create-card-b'
+    'current_bank_balance', '2026-07-09', 0, null, null, 'phase3-create-card-b'
   );
   perform public.close_card_statement(card_b, '2026-08-09', null, null, 'phase3-close-card-b');
   update phase3_ids set user_b_card = card_b;
@@ -233,6 +229,13 @@ begin
   if visible_rows <> 0 then raise exception 'user A can read user B card'; end if;
   if exists (select 1 from public.card_statements where user_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd') then
     raise exception 'user A can read user B statements';
+  end if;
+  if exists (select 1 from public.card_statement_close_candidates where user_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd') then
+    raise exception 'user A can read user B statement close candidate';
+  end if;
+  if public.card_next_pending_statement_date(card_b, current_date) is not null
+    or public.card_statement_preview_balance(card_b, '2026-08-09') is not null then
+    raise exception 'statement helper functions exposed user B card data';
   end if;
   begin
     perform public.update_credit_card(card_b, 'Ataque', 'Ataque', null, 1, 1, 1, null, 'generic', 'phase3-cross-update');

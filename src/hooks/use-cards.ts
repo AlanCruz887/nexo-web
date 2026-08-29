@@ -9,17 +9,20 @@ export const cardsQueryKey = ["cards"] as const;
 export const cardQueryKey = (cardId: string | undefined) => ["card", cardId] as const;
 export const cardStatementsQueryKey = (cardId: string | undefined) => ["card-statements", cardId] as const;
 export const cardCurrentCycleQueryKey = (cardId: string | undefined) => ["card-current-cycle", cardId] as const;
+export const cardStatementCloseCandidateQueryKey = (cardId: string | undefined) => ["card-statement-close-candidate", cardId] as const;
 
 export function useCards() { return useQuery({ queryKey: cardsQueryKey, queryFn: cardService.list, staleTime: 45_000 }); }
 export function useCard(cardId: string | undefined) { return useQuery({ queryKey: cardQueryKey(cardId), queryFn: cardId ? () => cardService.get(cardId) : skipToken }); }
 export function useCardStatements(cardId: string | undefined) { return useQuery({ queryKey: cardStatementsQueryKey(cardId), queryFn: cardId ? () => cardService.statements(cardId) : skipToken }); }
 export function useCardCurrentCycle(cardId: string | undefined) { return useQuery({ queryKey: cardCurrentCycleQueryKey(cardId), queryFn: cardId ? () => cardService.cycle(cardId) : skipToken }); }
+export function useCardStatementCloseCandidate(cardId: string | undefined) { return useQuery({ queryKey: cardStatementCloseCandidateQueryKey(cardId), queryFn: cardId ? () => cardService.statementCloseCandidate(cardId) : skipToken }); }
 
 function useInvalidateCards() {
   const client = useQueryClient();
   return () => Promise.all([
     client.invalidateQueries({ queryKey: cardsQueryKey }), client.invalidateQueries({ queryKey: ["card"] }),
     client.invalidateQueries({ queryKey: ["card-statements"] }), client.invalidateQueries({ queryKey: ["card-current-cycle"] }),
+    client.invalidateQueries({ queryKey: ["card-statement-close-candidate"] }),
   ]);
 }
 

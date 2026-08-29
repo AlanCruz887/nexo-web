@@ -6,6 +6,7 @@ import {
   formatMoney,
   minorToDisplay,
   serializeMoneyMinor,
+  splitPrincipalIntoInstallments,
 } from "@/lib/money";
 
 describe("money boundary", () => {
@@ -36,5 +37,10 @@ describe("money boundary", () => {
     expect(() => deserializeMoneyMinor("1.5")).toThrow();
     expect(() => displayToMinor("12.345", 2)).not.toThrow();
     expect(() => displayToMinor("12.3.4", 2)).toThrow();
+  });
+
+  it("keeps MSI division exact and moves rounding to the last installment", () => {
+    expect(splitPrincipalIntoInstallments(1_000_000n, 3)).toEqual([333_333n, 333_333n, 333_334n]);
+    expect(splitPrincipalIntoInstallments(1_200_000n, 12).reduce((sum, value) => sum + value, 0n)).toBe(1_200_000n);
   });
 });

@@ -8,6 +8,9 @@ export const movementFormSchema = z.object({
   occurred_on: z.iso.date("Usa una fecha válida."),
   description: z.string().trim().min(1, "Escribe una descripción.").max(160),
   notes: z.string().trim().max(2000),
+  purchase_scope: z.enum(["self", "other", "shared"]),
+  personal_amount: z.string(),
+  allocations: z.array(z.object({ contact_id: z.string().uuid(), amount: z.string().trim().min(1) })),
 });
 
 export const transferFormSchema = z.object({

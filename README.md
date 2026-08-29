@@ -1,10 +1,14 @@
 # Nexo
 
-Nexo es una aplicación financiera personal construida por fases. La Fase 3A agrega tarjetas de crédito, baselines, ciclos y estados de cuenta sobre el ledger seguro de las fases anteriores.
+Nexo es una aplicación financiera personal construida por fases. La Fase 5A permite registrar personas, compras compartidas, cuentas por cobrar y pagos recibidos.
 
 ## Estado
 
-**Fase 3A completada — Tarjetas de crédito, ciclos, baseline y estados de cuenta.**
+**Fase 5A completada — Personas, compras compartidas y dinero por cobrar.**
+
+El cierre de estados avanza desde el corte vencido más antiguo y mantiene el ciclo actual abierto hasta su fecha efectiva de corte.
+
+Los pagos sin deuda cerrada pendiente se muestran como anticipos asociados al ciclo abierto y se aplican al statement únicamente cuando este se cierra, sin duplicar el movimiento financiero.
 
 Implementado:
 
@@ -30,12 +34,20 @@ Implementado:
 - motor único de ciclos semiabiertos con ajuste de días 29–31;
 - saldo utilizado, disponible, pago actual y acumulado del ciclo como métricas independientes;
 - cierre manual e idempotente de statements, historial y restauración de tarjetas.
+- compras personales de tarjeta, método de pago informativo y asignación central de ciclo;
+- pagos atómicos cuenta↔tarjeta, asignados a statements pendientes sin crear gasto;
+- reembolsos parciales, movimientos globales unificados y correcciones auditables.
+- compras nuevas a MSI con principal único, mensualidad exacta, calendario por corte, progreso por statement pagado y reversión dedicada.
+- importación de MSI personales ya iniciados, con cuotas pagadas antes de Nexo, mensualidad bancaria real y control explícito de inclusión en saldo inicial.
+- personas activas/archivadas, saldos por moneda y detalle de actividad;
+- compras de cuenta o tarjeta para mí, otra persona o compartidas entre varias personas;
+- receivables nominales inmutables, pagos parciales FIFO y reversión auditable;
+- cobros que aumentan la cuenta y reducen el receivable sin crear ingreso ni gasto.
 
 Diseño futuro, no implementado:
 
-- compras completas de tarjeta, pagos desde cuentas y refunds operativos;
-- MSI;
-- personas y receivables;
+- MSI de terceros o compartidos;
+- MSI de terceros o compartidos, estado de cobro compartible y sobrepagos de personas;
 - presupuestos, planificación y reportes;
 - conciliación, importación y exportación.
 
@@ -81,6 +93,8 @@ Rutas implementadas:
 - `/movimientos`
 - `/cards` y `/cards/:id`
 - `/tarjetas` y `/tarjetas/:id`
+- `/personas` y `/personas/:id`
+- `/people` y `/people/:id` (alias compatibles)
 - `/accounts` y `/accounts/:id` (alias compatibles)
 - `/transactions` (alias compatible)
 - `/configuracion`
@@ -99,6 +113,9 @@ Las migraciones productivas están en `supabase/migrations/` y crean:
 - vistas `security_invoker` para saldos y actividad;
 - RPC tipados para cuentas, restauración, movimientos, transferencias, edición y reversión.
 - tablas, proyecciones y RPC para tarjetas, baselines, ciclos y statements.
+- metadatos de operaciones, asignaciones de pago a statements, actividad global `security_invoker` y RPC de compras/pagos/reembolsos/reversiones.
+- `contacts`, `receivables`, `purchase_allocations` y `receivable_entries`, con vistas `security_invoker` y RPC atómicos para compras distribuidas y pagos de personas.
+- `installment_plans`, `installments`, revisiones de metadata y proyecciones MSI `security_invoker`, operadas exclusivamente por RPC idempotentes.
 
 Para aplicar el stack completo cuando Docker esté disponible:
 
@@ -138,5 +155,6 @@ npm run build
 - [DOMAIN_RULES.md](./DOMAIN_RULES.md)
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [PLAN.md](./PLAN.md)
+- [PRODUCT_LANGUAGE.md](./PRODUCT_LANGUAGE.md) — diccionario y reglas para el lenguaje visible de Nexo.
 
-No debe comenzar la Fase 3B sin autorización explícita.
+No se implementaron Personas, receivables, MSI de terceros/compartidos ni compras compartidas.

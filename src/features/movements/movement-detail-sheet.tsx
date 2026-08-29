@@ -7,110 +7,45 @@ import { MoneyValue } from "@/components/money-value";
 import { ConfirmDialog, Sheet } from "@/components/sheet";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/toast";
+import { CardPurchaseForm } from "@/features/cards/card-purchase-form";
+import { MovementFormSheet } from "@/features/movements/movement-form-sheet";
+import { useReverseCardTransaction } from "@/hooks/use-card-transactions";
+import { useReverseInstallmentPurchase } from "@/hooks/use-installments";
+import { useCards } from "@/hooks/use-cards";
 import { useMovement, useReverseMovement, useUpdateTransferNotes } from "@/hooks/use-movements";
+import { useReversePersonPayment } from "@/hooks/use-contacts";
 import { formatAuditTimestamp, formatFinancialDate } from "@/lib/dates";
 import { toUserMessage } from "@/lib/errors";
 import { formatMoney } from "@/lib/money";
-import type { AccountActivity, AccountBalance } from "@/types/database";
-import { MovementFormSheet } from "@/features/movements/movement-form-sheet";
+import type { AccountBalance, CardPaymentMethod, FinancialActivity } from "@/types/database";
+
+const methodLabels: Record<CardPaymentMethod, string> = { physical_card: "Tarjeta física", apple_pay: "Apple Pay", google_pay: "Google Pay", online: "Compra en línea", other: "Otro" };
 
 export function MovementDetailSheet({ accounts, eventId, onEventIdChange, onOpenChange, open }: { accounts: AccountBalance[]; eventId?: string | undefined; onEventIdChange?: ((eventId: string) => void) | undefined; onOpenChange: (open: boolean) => void; open: boolean }) {
-  const movement = useMovement(eventId);
-  const reverse = useReverseMovement();
-  const toast = useToast();
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [duplicateOpen, setDuplicateOpen] = useState(false);
-
-  const primary = movement.data?.[0];
-  const isTransfer = primary?.kind === "transfer";
-  const isOpening = primary?.kind === "opening";
-
-  async function handleReverse() {
-    if (!eventId || !primary) return;
-    try {
-      await reverse.mutateAsync({ eventId, isTransfer });
-      toast.success(isTransfer ? "Transferencia revertida" : "Movimiento eliminado");
-      setConfirmOpen(false);
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(toUserMessage(error));
-    }
-  }
-
-  return (
-    <>
-      <Sheet description="Detalle y evidencia del movimiento." onOpenChange={onOpenChange} open={open} title="Movimiento">
-        {movement.isLoading ? <LoadingState label="Cargando movimiento" /> : movement.isError ? <ErrorState message={toUserMessage(movement.error)} /> : primary ? (
-          <div>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">{primary.kind === "income" ? "Ingreso" : primary.kind === "expense" ? "Gasto" : primary.kind === "transfer" ? "Transferencia" : primary.kind === "opening" ? "Saldo inicial" : "Ajuste"}</p>
-                <MoneyValue amount={primary.amount_minor} className="mt-1 block" currency={primary.currency} size="xl" />
-              </div>
-              {!isOpening ? <ActionMenu items={isTransfer ? [
-                { icon: <FilePenLine className="size-4" />, label: "Editar notas", onSelect: () => setEditOpen(true) },
-                { icon: <Undo2 className="size-4" />, label: "Revertir transferencia", onSelect: () => setConfirmOpen(true), tone: "danger" },
-              ] : [
-                { icon: <FilePenLine className="size-4" />, label: "Editar", onSelect: () => setEditOpen(true) },
-                { icon: <Copy className="size-4" />, label: "Duplicar", onSelect: () => setDuplicateOpen(true) },
-                { icon: <Trash2 className="size-4" />, label: "Eliminar", onSelect: () => setConfirmOpen(true), tone: "danger" },
-              ]} /> : null}
-            </div>
-            <div className="mt-8 rounded-2xl border border-border/70 bg-surface-secondary p-5">
-              <Detail label="Descripción" value={primary.description} />
-              {isTransfer ? <TransferAccounts legs={movement.data ?? []} /> : <Detail label="Cuenta" value={`${primary.account_name}${!primary.account_is_active ? " · Archivada" : ""}`} />}
-              <Detail label="Categoría" value={primary.category_name ?? (isTransfer ? "Transferencia" : "Sin categoría")} />
-              <Detail label="Fecha" value={formatFinancialDate(primary.occurred_on, "dd MMM yyyy")} />
-              <Detail label="Creado" value={formatAuditTimestamp(primary.created_at, "dd MMM yyyy, HH:mm")} />
-              <Detail label="Notas" value={primary.notes || "Sin notas"} last />
-            </div>
-            {!isOpening ? <div className="mt-5 grid grid-cols-3 gap-2">
-              <Button className="flex-1" onClick={() => setEditOpen(true)} variant="secondary">{isTransfer ? "Editar notas" : "Editar"}</Button>
-              {!isTransfer ? <Button onClick={() => setDuplicateOpen(true)} variant="ghost">Duplicar</Button> : null}
-              <Button onClick={() => setConfirmOpen(true)} variant="danger">{isTransfer ? "Revertir" : "Eliminar"}</Button>
-            </div> : null}
-          </div>
-        ) : <ErrorState message="No encontramos este movimiento." />}
-      </Sheet>
-      {primary && !isTransfer && !isOpening ? <MovementFormSheet accounts={accounts} existing={primary} onOpenChange={setEditOpen} onUpdated={onEventIdChange} open={editOpen} /> : null}
-      {primary && !isTransfer && !isOpening ? <MovementFormSheet accounts={accounts} onOpenChange={setDuplicateOpen} open={duplicateOpen} prefill={primary} /> : null}
-      {primary && isTransfer ? <TransferNotesSheet event={primary} onOpenChange={setEditOpen} open={editOpen} /> : null}
-      <ConfirmDialog
-        confirmLabel={isTransfer ? "Revertir transferencia" : "Eliminar movimiento"}
-        description={isTransfer ? `Se crearán entradas opuestas para revertir ${primary?.description ?? "la transferencia"} por ${primary ? formatMoney(primary.amount_minor, primary.currency) : "su importe"}. La evidencia original se conserva.` : `Nexo revertirá ${primary?.description ?? "el movimiento"} por ${primary ? formatMoney(primary.amount_minor, primary.currency) : "su importe"}. El registro original y su auditoría se conservan.`}
-        isPending={reverse.isPending}
-        onConfirm={() => void handleReverse()}
-        onOpenChange={setConfirmOpen}
-        open={confirmOpen}
-        title={isTransfer ? "¿Revertir transferencia?" : "¿Eliminar movimiento?"}
-      />
-    </>
-  );
+  const movement = useMovement(eventId); const cards = useCards(); const reverseAccount = useReverseMovement(); const reverseCard = useReverseCardTransaction(); const reverseInstallment = useReverseInstallmentPurchase(); const reversePersonPayment = useReversePersonPayment(); const toast = useToast();
+  const [confirmOpen, setConfirmOpen] = useState(false); const [editOpen, setEditOpen] = useState(false); const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const primary = movement.data?.[0]; const isTransfer = primary?.kind === "transfer"; const isOpening = primary?.kind === "opening"; const isPersonPayment = primary?.kind === "person_payment"; const isCard = primary?.source_type === "card"; const isPurchase = primary?.kind === "card_charge"; const isInstallment = Boolean(primary?.installment_plan_id);
+  async function handleReverse() { if (!eventId || !primary) return; try { if (primary.kind === "person_payment") await reversePersonPayment.mutateAsync(eventId); else if (isInstallment && primary.installment_plan_id) await reverseInstallment.mutateAsync(primary.installment_plan_id); else if (isCard) await reverseCard.mutateAsync({ eventId, kind: primary.kind as "card_charge" | "card_payment" | "card_refund" }); else await reverseAccount.mutateAsync({ eventId, isTransfer }); toast.success(primary.kind === "person_payment" ? "Pago recibido revertido" : isInstallment ? "Compra MSI revertida" : primary.kind === "card_payment" ? "Pago revertido" : isCard ? "Movimiento de tarjeta revertido" : isTransfer ? "Transferencia revertida" : "Movimiento eliminado"); setConfirmOpen(false); onOpenChange(false); } catch (error) { toast.error(toUserMessage(error)); } }
+  const kindLabel = primary ? labelFor(primary) : "Movimiento";
+  return <>
+    <Sheet description="Información y acciones de este movimiento." onOpenChange={onOpenChange} open={open} title="Movimiento">
+      {movement.isLoading ? <LoadingState label="Cargando movimiento" /> : movement.isError ? <ErrorState message={toUserMessage(movement.error)} /> : primary ? <div>
+        <div className="flex items-start justify-between gap-4"><div><p className="text-sm text-muted-foreground">{kindLabel}</p><MoneyValue amount={primary.amount_minor} className="mt-1 block" currency={primary.currency} size="xl" /></div>{!isOpening ? <ActionMenu items={menuItems(primary, { edit: () => setEditOpen(true), duplicate: () => setDuplicateOpen(true), reverse: () => setConfirmOpen(true) })} /> : null}</div>
+        <div className="mt-8 rounded-2xl bg-surface-secondary p-5"><Detail label="Descripción" value={primary.installment_description ?? primary.description} /><Detail label={isCard ? "Tarjeta" : isTransfer ? "De una cuenta a otra" : "Cuenta"} value={primary.source_name} />{isInstallment ? <><Detail label="Plan" value={`${primary.installment_count} MSI`} /><Detail label="Mensualidad" value={formatMoney(primary.installment_amount_minor ?? "0", primary.currency)} /></> : null}{primary.kind === "card_payment" ? <Detail label="Cuenta de origen" value={primary.source_account_name ?? "Cuenta de origen"} /> : null}<Detail label="Categoría" value={primary.installment_category_name ?? primary.category_name ?? (isTransfer ? "Transferencia" : kindLabel)} /><Detail label="Fecha" value={formatFinancialDate(primary.occurred_on, "dd MMM yyyy")} />{primary.payment_method ? <Detail label="Método de pago" value={methodLabels[primary.payment_method]} /> : null}{primary.kind === "card_payment" && BigInt(primary.payment_applied_minor ?? "0") > 0n ? <Detail label="Pagó estados anteriores" value={formatMoney(primary.payment_applied_minor ?? "0", primary.currency)} /> : null}{primary.kind === "card_payment" && BigInt(primary.payment_advance_minor ?? "0") > 0n ? <><Detail label="Pago anticipado" value={formatMoney(primary.payment_advance_minor ?? "0", primary.currency)} /><Detail label="Periodo relacionado" value={`${formatFinancialDate(primary.payment_cycle_start ?? primary.occurred_on, "dd MMM yyyy")} → ${formatFinancialDate(primary.payment_cycle_end ?? primary.occurred_on, "dd MMM yyyy")}`} /><Detail label="Próximo estado" value={formatFinancialDate(primary.payment_cycle_statement_date ?? primary.occurred_on, "dd MMM yyyy")} /><Detail label="Estado" value={primary.payment_state === "mixed" ? "Parte pagó estados anteriores · parte quedó anticipada" : "Pago anticipado"} /></> : primary.statement_date ? <Detail label="Estado de cuenta" value={formatFinancialDate(primary.statement_date, "dd MMM yyyy")} /> : null}<Detail label="Registrado" value={formatAuditTimestamp(primary.created_at, "dd MMM yyyy, HH:mm")} /><Detail label="Notas" value={(primary.installment_notes ?? primary.notes) || "Sin notas"} last /></div>
+        {primary.third_party_allocations?.length ? <div className="mt-4 rounded-2xl border border-border p-5"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Distribución de la compra</p><div className="mt-3"><Detail label="Tu parte" value={formatMoney(primary.personal_amount_minor, primary.currency)} />{primary.third_party_allocations.map((item) => <Detail key={item.contact_id} label={item.contact_name} value={formatMoney(item.amount_minor, primary.currency)} />)}</div></div> : null}
+        {!isOpening ? <div className="mt-5 flex gap-2">{(isPurchase && !isInstallment) || (!isCard && !isTransfer && !isPersonPayment) ? <Button className="flex-1" onClick={() => setEditOpen(true)} variant="secondary">Editar</Button> : null}{(isPurchase && !isInstallment) || (!isCard && !isTransfer && !isPersonPayment) ? <Button onClick={() => setDuplicateOpen(true)} variant="ghost">Duplicar</Button> : null}<Button className="flex-1" onClick={() => setConfirmOpen(true)} variant="danger">{isInstallment ? "Revertir compra MSI" : primary.kind === "card_payment" || primary.kind === "person_payment" || isTransfer ? "Revertir" : "Eliminar"}</Button></div> : null}
+      </div> : <ErrorState message="No encontramos este movimiento." />}
+    </Sheet>
+    {primary && isPurchase && !isInstallment ? <CardPurchaseForm cards={cards.data ?? []} existing={primary} onOpenChange={setEditOpen} {...(onEventIdChange ? { onUpdated: onEventIdChange } : {})} open={editOpen} /> : null}
+    {primary && isPurchase && !isInstallment ? <CardPurchaseForm cards={cards.data ?? []} onOpenChange={setDuplicateOpen} open={duplicateOpen} prefill={primary} /> : null}
+    {primary && !isCard && !isTransfer && !isOpening && !isPersonPayment ? <MovementFormSheet accounts={accounts} existing={primary} onOpenChange={setEditOpen} onUpdated={onEventIdChange} open={editOpen} /> : null}
+    {primary && !isCard && !isTransfer && !isOpening && !isPersonPayment ? <MovementFormSheet accounts={accounts} onOpenChange={setDuplicateOpen} open={duplicateOpen} prefill={primary} /> : null}
+    {primary && isTransfer ? <TransferNotesSheet event={primary} onOpenChange={setEditOpen} open={editOpen} /> : null}
+    <ConfirmDialog confirmLabel={isInstallment ? "Revertir compra MSI" : primary?.kind === "card_payment" || primary?.kind === "person_payment" || isTransfer ? "Revertir movimiento" : "Eliminar movimiento"} description={`Se cancelará ${primary?.description ?? "este movimiento"}${primary ? ` por ${formatMoney(primary.amount_minor, primary.currency)}` : ""} y Nexo restaurará los saldos afectados. El historial se conservará.${isInstallment ? " También se cancelarán sus mensualidades futuras." : isPurchase ? " Si la compra ya pertenece a un estado cerrado, deberás registrar un reembolso." : ""}`} isPending={primary?.kind === "person_payment" ? reversePersonPayment.isPending : isInstallment ? reverseInstallment.isPending : isCard ? reverseCard.isPending : reverseAccount.isPending} onConfirm={() => void handleReverse()} onOpenChange={setConfirmOpen} open={confirmOpen} title="¿Confirmar reversión?" />
+  </>;
 }
 
-function Detail({ label, last = false, value }: { label: string; last?: boolean; value: string }) {
-  return <div className={`flex items-start justify-between gap-5 py-3 ${last ? "" : "border-b border-border/70"}`}><span className="text-xs font-medium text-muted-foreground">{label}</span><span className="max-w-[65%] text-right text-sm font-medium">{value}</span></div>;
-}
-
-function TransferAccounts({ legs }: { legs: AccountActivity[] }) {
-  const source = legs.find((leg) => BigInt(leg.account_delta_minor) < 0n);
-  const destination = legs.find((leg) => BigInt(leg.account_delta_minor) > 0n);
-  return <><Detail label="Desde" value={source?.account_name ?? "Cuenta origen"} /><Detail label="Hacia" value={destination?.account_name ?? "Cuenta destino"} /></>;
-}
-
-function TransferNotesSheet({ event, onOpenChange, open }: { event: AccountActivity; onOpenChange: (open: boolean) => void; open: boolean }) {
-  const [notes, setNotes] = useState(event.notes ?? "");
-  const update = useUpdateTransferNotes(event.event_id);
-  const toast = useToast();
-  async function save() {
-    try {
-      await update.mutateAsync(notes);
-      toast.success("Notas actualizadas");
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(toUserMessage(error));
-    }
-  }
-  return <Sheet description="El importe y las cuentas no cambian; la actualización queda auditada." onOpenChange={onOpenChange} open={open} title="Notas de transferencia"><label className="text-sm font-medium" htmlFor="transfer-detail-notes">Notas</label><textarea className="mt-2 min-h-36 w-full resize-none rounded-xl border border-border bg-surface p-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20" id="transfer-detail-notes" onChange={(e) => setNotes(e.target.value)} value={notes} /><Button className="mt-5 w-full" disabled={update.isPending} onClick={() => void save()}>{update.isPending ? "Guardando…" : "Guardar notas"}</Button></Sheet>;
-}
+function labelFor(movement: FinancialActivity) { return movement.installment_plan_id ? `Compra a ${movement.installment_count} MSI` : movement.kind === "person_payment" ? "Pago recibido · no es ingreso" : movement.kind === "income" ? "Ingreso" : movement.kind === "expense" ? "Gasto desde cuenta" : movement.kind === "transfer" ? "Transferencia" : movement.kind === "opening" ? "Saldo inicial" : movement.kind === "card_charge" ? "Compra con tarjeta" : movement.kind === "card_payment" ? movement.payment_state === "advance" ? "Pago anticipado" : movement.payment_state === "mixed" ? "Pago parcialmente aplicado" : "Pago de tarjeta" : movement.kind === "card_refund" ? "Reembolso" : "Ajuste"; }
+function menuItems(movement: FinancialActivity, actions: { edit: () => void; duplicate: () => void; reverse: () => void }) { if (movement.kind === "person_payment") return [{ icon: <Undo2 className="size-4" />, label: "Revertir pago recibido", onSelect: actions.reverse, tone: "danger" as const }]; if (movement.installment_plan_id) return [{ icon: <Undo2 className="size-4" />, label: "Revertir compra MSI", onSelect: actions.reverse, tone: "danger" as const }]; if (movement.kind === "transfer") return [{ icon: <FilePenLine className="size-4" />, label: "Editar notas", onSelect: actions.edit }, { icon: <Undo2 className="size-4" />, label: "Revertir transferencia", onSelect: actions.reverse, tone: "danger" as const }]; if (movement.kind === "card_payment") return [{ icon: <Undo2 className="size-4" />, label: "Revertir pago", onSelect: actions.reverse, tone: "danger" as const }]; if (movement.kind === "card_refund") return [{ icon: <Undo2 className="size-4" />, label: "Revertir reembolso", onSelect: actions.reverse, tone: "danger" as const }]; return [{ icon: <FilePenLine className="size-4" />, label: "Editar", onSelect: actions.edit }, { icon: <Copy className="size-4" />, label: "Duplicar", onSelect: actions.duplicate }, { icon: <Trash2 className="size-4" />, label: "Eliminar", onSelect: actions.reverse, tone: "danger" as const }]; }
+function Detail({ label, last = false, value }: { label: string; last?: boolean; value: React.ReactNode }) { return <div className={`flex items-start justify-between gap-5 py-3 ${last ? "" : "border-b border-border/70"}`}><span className="text-xs font-medium text-muted-foreground">{label}</span><span className="max-w-[65%] text-right text-sm font-medium">{value}</span></div>; }
+function TransferNotesSheet({ event, onOpenChange, open }: { event: FinancialActivity; onOpenChange: (open: boolean) => void; open: boolean }) { const [notes, setNotes] = useState(event.notes ?? ""); const update = useUpdateTransferNotes(event.event_id); const toast = useToast(); async function save() { try { await update.mutateAsync(notes); toast.success("Notas actualizadas"); onOpenChange(false); } catch (error) { toast.error(toUserMessage(error)); } } return <Sheet description="Solo cambiarán las notas. El importe y las cuentas permanecerán iguales." onOpenChange={onOpenChange} open={open} title="Notas de transferencia"><label className="text-sm font-medium" htmlFor="transfer-detail-notes">Notas</label><textarea className="mt-2 min-h-36 w-full resize-none rounded-xl border border-border bg-surface p-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20" id="transfer-detail-notes" onChange={(event) => setNotes(event.target.value)} value={notes} /><Button className="mt-5 w-full" disabled={update.isPending} onClick={() => void save()}>{update.isPending ? "Guardando…" : "Guardar notas"}</Button></Sheet>; }

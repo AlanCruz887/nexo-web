@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Landmark, LogOut, Search } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CreditCard, Landmark, LogOut, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
@@ -6,9 +6,11 @@ import { useAuth } from "@/app/auth-provider";
 import { QuickAddMenu, type QuickAction } from "@/components/quick-add-menu";
 import { ResponsiveDialog } from "@/components/responsive-dialog";
 import { AccountFormSheet } from "@/features/accounts/account-form-sheet";
+import { CardPurchaseForm } from "@/features/cards/card-purchase-form";
 import { MovementFormSheet } from "@/features/movements/movement-form-sheet";
 import { TransferFormSheet } from "@/features/movements/transfer-form-sheet";
 import { useAccounts } from "@/hooks/use-accounts";
+import { useCards } from "@/hooks/use-cards";
 import { useProfile } from "@/hooks/use-profile";
 import { cn } from "@/lib/cn";
 import { reportError } from "@/lib/errors";
@@ -19,6 +21,7 @@ export function AppShell() {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const accounts = useAccounts();
+  const cards = useCards();
   const profile = useProfile(user?.id);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -52,6 +55,7 @@ export function AppShell() {
     <MovementFormSheet accounts={accounts.data ?? []} defaultKind={activeAction === "income" ? "income" : "expense"} onOpenChange={(open) => { if (!open) setActiveAction(undefined); }} open={activeAction === "expense" || activeAction === "income"} />
     <TransferFormSheet accounts={accounts.data ?? []} onOpenChange={(open) => { if (!open) setActiveAction(undefined); }} open={activeAction === "transfer"} />
     <AccountFormSheet baseCurrency={profile.data?.base_currency ?? "MXN"} onOpenChange={(open) => { if (!open) setActiveAction(undefined); }} open={activeAction === "account"} />
+    <CardPurchaseForm cards={cards.data ?? []} onOpenChange={(open) => { if (!open) setActiveAction(undefined); }} open={activeAction === "card_purchase"} />
   </div>;
 }
 
@@ -61,7 +65,7 @@ function MobileNav({ item: { href, icon: Icon, label } }: { item: (typeof primar
 
 function CommandMenu({ onNavigate, onOpenChange, onQuickAction, open }: { onNavigate: (href: string) => void; onOpenChange: (open: boolean) => void; onQuickAction: (action: QuickAction) => void; open: boolean }) {
   const [query, setQuery] = useState("");
-  const actions = [{ id: "expense" as const, label: "Nuevo gasto", icon: ArrowUpRight }, { id: "income" as const, label: "Nuevo ingreso", icon: ArrowDownLeft }, { id: "transfer" as const, label: "Transferencia", icon: ArrowLeftRight }, { id: "account" as const, label: "Nueva cuenta", icon: Landmark }];
+  const actions = [{ id: "expense" as const, label: "Gasto desde cuenta", icon: ArrowUpRight }, { id: "income" as const, label: "Ingreso", icon: ArrowDownLeft }, { id: "transfer" as const, label: "Transferencia", icon: ArrowLeftRight }, { id: "card_purchase" as const, label: "Compra con tarjeta", icon: CreditCard }, { id: "account" as const, label: "Nueva cuenta", icon: Landmark }];
   const normalized = query.trim().toLocaleLowerCase("es");
   const visibleActions = actions.filter(({ label }) => label.toLocaleLowerCase("es").includes(normalized));
   const visibleNavigation = primaryNavigation.filter(({ label }) => label.toLocaleLowerCase("es").includes(normalized));

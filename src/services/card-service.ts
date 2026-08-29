@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { CardEditInput, CardFormInput } from "@/schemas/card";
-import type { CardCurrentCycle, CardStatement, CardSummary } from "@/types/database";
+import type { CardCurrentCycle, CardStatement, CardStatementCloseCandidate, CardSummary } from "@/types/database";
 
 export const cardService = {
   async list(): Promise<CardSummary[]> {
@@ -20,6 +20,11 @@ export const cardService = {
   },
   async statements(cardId: string): Promise<CardStatement[]> {
     const { data, error } = await supabase.from("card_statements").select("*").eq("card_id", cardId).order("statement_date", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  async statementCloseCandidate(cardId: string): Promise<CardStatementCloseCandidate | null> {
+    const { data, error } = await supabase.from("card_statement_close_candidates").select("*").eq("card_id", cardId).maybeSingle();
     if (error) throw error;
     return data;
   },

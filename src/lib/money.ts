@@ -83,6 +83,14 @@ export function parseMoneyInput(input: string, minorUnit = 2): MoneyMinor {
 
 export const displayToMinor = parseMoneyInput;
 
+export function splitPrincipalIntoInstallments(principal: MoneyMinor, count: number, regularAmount?: MoneyMinor): MoneyMinor[] {
+  if (principal <= 0n || !Number.isInteger(count) || count < 2) throw new RangeError("El plan MSI no es válido.");
+  const regular = regularAmount ?? principal / BigInt(count);
+  const last = principal - regular * BigInt(count - 1);
+  if (regular <= 0n || last <= 0n) throw new RangeError("La mensualidad no permite completar el importe original.");
+  return [...Array<MoneyMinor>(count - 1).fill(regular), last];
+}
+
 export function formatMoney(
   value: MoneyMinor | MoneyMinorSerialized,
   currency: CurrencyCode,

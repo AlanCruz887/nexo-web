@@ -30,7 +30,7 @@ export function RecoverPasswordPage() {
   return (
     <AuthCard
       description="Te enviaremos un enlace seguro para elegir una contraseña nueva."
-      footer={<Link className="font-medium text-primary hover:underline" to="/login">Volver al inicio de sesión</Link>}
+      footer={<Link className="inline-flex min-h-11 items-center px-2 font-medium text-primary hover:underline" to="/login">Volver al inicio de sesión</Link>}
       title="Recuperar contraseña"
     >
       <form className="space-y-4" onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>

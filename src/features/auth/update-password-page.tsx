@@ -30,7 +30,7 @@ export function UpdatePasswordPage() {
   return (
     <AuthCard
       description="Elige una contraseña nueva para tu cuenta."
-      footer={<Link className="font-medium text-primary hover:underline" to="/login">Continuar a Nexo</Link>}
+      footer={<Link className="inline-flex min-h-11 items-center px-2 font-medium text-primary hover:underline" to="/login">Continuar a Nexo</Link>}
       title="Nueva contraseña"
     >
       <form className="space-y-4" onSubmit={(event) => void form.handleSubmit(onSubmit)(event)}>
