@@ -9,6 +9,7 @@ const valid = {
   current_installment_number: "5", reported_paid_amount: "4000", principal_paid: "4000",
   next_statement_date: "2026-09-09", category_id: "technology", notes: "",
   opening_balance_inclusion: "included" as const,
+  purchase_scope: "self" as const, personal_amount: "8000", allocations: [],
 };
 
 describe("historical installment schema", () => {
