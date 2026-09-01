@@ -370,6 +370,17 @@ export type RecurringOccurrenceActivity = {
   account_id: string | null; card_id: string | null; is_reversed_without_replacement: boolean;
 };
 
+/** Phase 7C-A: iPhone Shortcuts personal tokens (domain only, no HTTP layer yet). */
+export type ShortcutTokenScope = "shortcut:options:read" | "shortcut:transactions:write";
+export type ShortcutTokenCreated = {
+  id: string; token_plain: string; name: string; scopes: ShortcutTokenScope[];
+  created_at: string; expires_at: string | null;
+};
+export type ShortcutTokenSummary = {
+  id: string; name: string; scopes: ShortcutTokenScope[]; created_at: string;
+  last_used_at: string | null; expires_at: string | null; revoked_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -651,6 +662,12 @@ export type Database = {
       confirm_recurring_occurrence: { Args: { p_rule_id: string; p_expected_date: string; p_actual_amount_minor: string; p_actual_date: string; p_source_account_id: string | null; p_source_card_id: string | null; p_notes: string | null; p_idempotency_key: string }; Returns: string };
       omit_recurring_occurrence: { Args: { p_rule_id: string; p_expected_date: string; p_notes: string | null; p_idempotency_key: string }; Returns: string };
       get_recurring_occurrences: { Args: { p_from_date: string; p_to_date: string }; Returns: RecurringOccurrenceCandidate[] };
+      // Phase 7C-A: web-app-facing token management only. execute_shortcut_transaction
+      // is service_role-only and deliberately NOT registered here -- the browser client
+      // must never be able to reference it, even at the type level.
+      create_shortcut_token: { Args: { p_name: string; p_scopes: ShortcutTokenScope[] }; Returns: ShortcutTokenCreated[] };
+      list_shortcut_tokens: { Args: Record<string, never>; Returns: ShortcutTokenSummary[] };
+      revoke_shortcut_token: { Args: { p_token_id: string; p_idempotency_key: string }; Returns: string };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
