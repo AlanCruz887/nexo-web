@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatFinancialDate,
   formatAuditTimestamp,
+  formatRelativeTime,
   isValidTimezone,
   parseAuditTimestamp,
   parseFinancialDate,
@@ -24,5 +25,23 @@ describe("date boundaries", () => {
   it("validates profile timezones", () => {
     expect(isValidTimezone("America/Mexico_City")).toBe(true);
     expect(isValidTimezone("Not/A_Timezone")).toBe(false);
+  });
+
+  // Built from LOCAL date components (never a hardcoded "...Z" instant)
+  // so this holds regardless of the machine/CI runner's timezone --
+  // "Hoy"/"Ayer" are calendar-day comparisons in local time, and "HH:mm"
+  // is rendered in local time too, matching how formatRelativeTime is
+  // actually used (last_used_at shown to a person in their own clock).
+  it("formats last-used timestamps in human-relative terms", () => {
+    const now = new Date(2026, 7, 30, 12, 0, 0); // 30 Aug 2026, noon local
+    const threeMinAgo = new Date(now.getTime() - 3 * 60_000);
+    const todayEarlier = new Date(2026, 7, 30, 9, 42, 0);
+    const yesterday = new Date(2026, 7, 29, 12, 0, 0);
+    const weeksAgo = new Date(2026, 7, 1, 9, 42, 0);
+
+    expect(formatRelativeTime(threeMinAgo.toISOString(), now)).toBe("Hace 3 min");
+    expect(formatRelativeTime(todayEarlier.toISOString(), now)).toBe("Hoy, 09:42");
+    expect(formatRelativeTime(yesterday.toISOString(), now)).toBe("Ayer");
+    expect(formatRelativeTime(weeksAgo.toISOString(), now)).toBe("1 de ago, 2026");
   });
 });

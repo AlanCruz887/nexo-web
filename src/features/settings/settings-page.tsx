@@ -12,6 +12,7 @@ import { SettingsSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { ShortcutTokensSection } from "@/features/settings/shortcut-tokens-section";
 import { useCurrencies } from "@/hooks/use-currencies";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { getBrowserTimezone } from "@/lib/dates";
@@ -94,6 +95,8 @@ export function SettingsPage() {
               </div>
             </div>
           </section>
+
+          <ShortcutTokensSection />
 
           <section className="grid gap-6 py-8 md:grid-cols-[220px_1fr]"><div><h2 className="font-semibold">Sesión</h2><p className="mt-1 text-sm text-muted-foreground">Acceso actual a Nexo.</p></div><div><p className="text-sm font-medium">{user.email}</p><Button className="mt-4" onClick={() => void signOut()} type="button" variant="secondary">Cerrar sesión</Button></div></section>
         </div>
