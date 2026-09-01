@@ -102,25 +102,31 @@ function StatementBlockView({ block, installments }: { block: StatementBlock; in
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{block.currency}</p>
       <div className="mt-4 grid gap-6 sm:grid-cols-2">
-        <div><p className="text-xs uppercase tracking-wide text-muted-foreground">A pagar este periodo</p><MoneyValue amount={block.toPayThisPeriodMinor} className="mt-1" currency={block.currency} size="xl" /></div>
+        <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Pendiente este periodo</p><MoneyValue amount={block.remainingMinor} className="mt-1" currency={block.currency} size="xl" /></div>
         {block.paymentDueDate ? <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Fecha límite</p><p className="mt-1 text-2xl font-semibold">{formatFinancialDate(block.paymentDueDate)}</p></div> : null}
       </div>
       <div className="mt-6 grid grid-cols-2 gap-5 border-t border-border/70 pt-5 sm:grid-cols-4">
+        <Metric label="Total del periodo" value={<MoneyValue amount={block.periodTotalMinor} currency={block.currency} size="sm" />} />
+        <Metric label="Cubierto" value={<MoneyValue amount={block.coveredMinor} currency={block.currency} size="sm" />} />
         <Metric label="Te debe en total" value={<MoneyValue amount={block.totalOwedMinor} currency={block.currency} size="sm" />} />
-        <Metric label="Pagado este periodo" value={<MoneyValue amount={block.paidThisPeriodMinor} currency={block.currency} size="sm" />} />
-        <Metric label="Falta" value={<MoneyValue amount={block.missingMinor} currency={block.currency} size="sm" />} />
         {hasOverdue ? <Metric label={block.overdueSince ? `Vencido desde ${formatFinancialDate(block.overdueSince)}` : "Vencido"} value={<MoneyValue amount={block.overdueMinor} className="text-danger" currency={block.currency} size="sm" />} /> : null}
       </div>
+      {block.reconciledMinor !== "0" ? <p className="mt-3 text-xs text-muted-foreground">Cubierto incluye <MoneyValue amount={block.reconciledMinor} currency={block.currency} size="sm" /> de reconciliación de un cronograma histórico, no un pago nuevo — ver Pagos recibidos abajo para lo que realmente se recibió.</p> : null}
       {hasCredit ? <div className="mt-5 rounded-2xl border border-primary/20 bg-primary-soft px-5 py-4"><p className="text-xs font-semibold text-primary-strong">Saldo a favor</p><MoneyValue amount={block.creditBalanceMinor} className="mt-1 text-primary-strong" currency={block.currency} size="lg" /></div> : null}
     </div>
 
     {block.concepts.length ? <div><h2 className="text-sm font-semibold text-muted-foreground">Este periodo</h2>
-      <div className="mt-3 divide-y divide-border border-y border-border">
-        {block.concepts.map((concept) => <div className="flex items-center justify-between gap-4 py-3" key={concept.id}>
-          <div><p className="text-sm font-medium">{concept.description}</p><p className="mt-0.5 text-xs text-muted-foreground">{concept.typeLabel}</p></div>
-          <div className="text-right"><MoneyValue amount={concept.amountMinor} currency={block.currency} size="sm" />{concept.purchaseAmountMinor !== concept.amountMinor ? <p className="mt-0.5 text-xs text-muted-foreground">de <MoneyValue amount={concept.purchaseAmountMinor} currency={block.currency} privacy size="sm" /></p> : null}</div>
-        </div>)}
-        <div className="flex items-center justify-between gap-4 py-3"><p className="text-sm font-semibold">Total del periodo</p><MoneyValue amount={block.toPayThisPeriodMinor} currency={block.currency} size="sm" /></div>
+      <div className="mt-3 border-y border-border">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"><span>Concepto</span><span className="text-right">Correspondía</span><span className="text-right">Pagado</span><span className="text-right">Pendiente</span></div>
+        <div className="divide-y divide-border">
+          {block.concepts.map((concept) => { const shared = concept.purchaseAmountMinor !== concept.amountMinor; return <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 py-3" key={concept.id}>
+            <div><p className="text-sm font-medium">{concept.description}</p><p className="mt-0.5 text-xs text-muted-foreground">{concept.typeLabel}{shared ? <> · de <MoneyValue amount={concept.purchaseAmountMinor} currency={block.currency} privacy size="sm" /> en total</> : null}</p></div>
+            <MoneyValue amount={concept.amountMinor} currency={block.currency} size="sm" />
+            <MoneyValue amount={concept.coveredMinor} currency={block.currency} size="sm" />
+            <MoneyValue amount={concept.outstandingMinor} currency={block.currency} size="sm" />
+          </div>; })}
+        </div>
+        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 border-t border-border py-3 font-semibold"><p className="text-sm">Total del periodo</p><MoneyValue amount={block.periodTotalMinor} currency={block.currency} size="sm" /><MoneyValue amount={block.coveredMinor} currency={block.currency} size="sm" /><MoneyValue amount={block.remainingMinor} currency={block.currency} size="sm" /></div>
       </div>
     </div> : null}
 

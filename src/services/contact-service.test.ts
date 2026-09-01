@@ -35,7 +35,7 @@ const ana: Omit<ContactSummary, "periods"> = {
 
 const carlosPeriod: PersonCollectionPeriod = {
   currency: "MXN", period_start: "2026-09-09", payment_due_date: "2026-09-29",
-  subtotal_minor: "66667", paid_minor: "0", credit_applied_minor: "0",
+  subtotal_minor: "66667", paid_minor: "0", credit_applied_minor: "0", reconciled_minor: "0",
   remaining_minor: "66667", overdue_minor: "0", overdue_since: null, total_outstanding_minor: "800000",
   credit_balance_minor: "0", concepts: [],
 };

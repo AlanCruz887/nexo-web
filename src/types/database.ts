@@ -169,12 +169,12 @@ export type ContactActivity = {
 export type PersonPeriodConcept = {
   id: string; description: string; statement_date: string | null; payment_due_date: string;
   amount_minor: string; paid_minor: string; outstanding_minor: string;
-  credit_applied_minor: string; purchase_amount_minor: string; installment_id: string | null;
-  installment_number: number; installment_count: number | null;
+  credit_applied_minor: string; reconciled_minor: string; purchase_amount_minor: string;
+  installment_id: string | null; installment_number: number; installment_count: number | null;
 };
 export type PersonCollectionPeriod = {
   currency: CurrencyCode; period_start: string | null; payment_due_date: string | null;
-  subtotal_minor: string; paid_minor: string; credit_applied_minor: string;
+  subtotal_minor: string; paid_minor: string; credit_applied_minor: string; reconciled_minor: string;
   remaining_minor: string; overdue_minor: string; overdue_since: string | null;
   total_outstanding_minor: string; credit_balance_minor: string;
   concepts: PersonPeriodConcept[];
@@ -186,6 +186,46 @@ export type PersonStatementPayment = {
   credit_generated_minor: string;
 };
 export type PersonStatement = PersonCollectionProjection & { payments: PersonStatementPayment[] };
+
+export type BudgetPeriodSummary = {
+  id: string; category_id: string; category_name: string; category_icon: string;
+  currency: CurrencyCode; limit_minor: string; is_recurring: boolean; period_month: string;
+  spent_minor: string; available_minor: string; percentage: number;
+};
+export type BudgetMovement = {
+  row_kind: "movement" | "installment";
+  event_id: string;
+  description: string | null;
+  occurred_on: string;
+  personal_amount_minor: string;
+  // movement-only
+  event_kind?: string;
+  source_type?: string;
+  source_name?: string | null;
+  amount_minor?: string;
+  // installment-only
+  plan_id?: string;
+  installment_number?: number;
+  installment_count?: number;
+};
+export type GoalStatus = "active" | "paused";
+export type GoalBalance = {
+  id: string; user_id: string; name: string; currency: CurrencyCode;
+  target_minor: string; target_date: string | null; linked_account_id: string | null;
+  icon: string | null; status: GoalStatus; archived_at: string | null;
+  created_at: string; updated_at: string;
+  saved_minor: string; backed_minor: string; remaining_minor: string;
+  percentage: number; is_achieved: boolean;
+  months_remaining: number | null; recommended_monthly_minor: string | null;
+};
+export type GoalEntryKind = "contribution" | "withdrawal" | "reversal";
+export type GoalEntryActivity = {
+  id: string; user_id: string; goal_id: string; entry_kind: GoalEntryKind;
+  amount_minor: string; occurred_on: string; notes: string | null; created_at: string;
+  reverses_entry_id: string | null; is_reversed: boolean;
+  account_id: string; account_name: string; account_is_active: boolean;
+  financial_event_id: string | null; is_real_movement: boolean;
+};
 export type PersonInstallmentSummary = {
   plan_id: string; user_id: string; contact_id: string; card_id: string;
   origin: InstallmentPlanOrigin; installment_count: number; currency: CurrencyCode;
@@ -244,6 +284,90 @@ export type InstallmentSchedule = {
   due_statement_date: string; principal_minor: string; reported_amount_minor: string;
   effective_status: InstallmentStatus;
   statement_id: string | null; statement_remaining_due_minor: string | null; created_at: string;
+};
+
+export type PlannedCashFlowRecurrence = "one_time" | "monthly";
+export type PlannedCashFlow = {
+  id: string; user_id: string; name: string; currency: CurrencyCode;
+  amount_minor: string; category_id: string | null; recurrence: PlannedCashFlowRecurrence;
+  start_date: string; end_date: string | null; archived_at: string | null;
+  created_at: string; updated_at: string;
+};
+
+export type FinancialPlanAccountLine = {
+  account_id: string; name: string; balance_minor: string; backed_minor: string; available_minor: string;
+};
+export type FinancialPlanGoalShortfall = { goal_id: string; name: string; shortfall_minor: string };
+export type FinancialPlanSaldoInicial = {
+  accounts: FinancialPlanAccountLine[];
+  saldo_en_cuentas_minor: string;
+  apartado_respaldado_minor: string;
+  disponible_sin_comprometer_minor: string;
+  faltante_de_respaldo_minor: string;
+  faltante_de_respaldo_por_meta: FinancialPlanGoalShortfall[];
+};
+export type FinancialPlanCardObligation = {
+  card_id: string; name: string; statement_date: string; payment_due_date: string;
+  is_closed: boolean; amount_minor: string;
+};
+export type FinancialPlanFlowLine = {
+  flow_id: string; name: string; category_id: string | null; amount_minor: string; occurred_on: string;
+};
+export type FinancialPlanBudgetLine = {
+  category_id: string; category_name: string; category_icon: string;
+  limit_minor: string; spent_minor: string; available_minor: string;
+  planned_categorized_minor: string; flexible_additional_minor: string;
+};
+export type FinancialPlanGoalLine = {
+  goal_id: string; name: string; status: GoalStatus; target_minor: string; target_date: string | null;
+  target_date_passed: boolean; recommended_minor: string; projected_saved_minor: string;
+};
+export type FinancialPlanCollectionLine = { contact_id: string; contact_name: string; outstanding_minor: string };
+export type FinancialPlanScenarioPoint = { opening_minor: string; closing_minor: string };
+export type FinancialPlanMonth = {
+  month_index: number; month_start: string;
+  card_obligations: FinancialPlanCardObligation[]; card_obligations_total_minor: string;
+  planned_flows: FinancialPlanFlowLine[]; planned_income_total_minor: string; planned_outflow_total_minor: string;
+  budgets: FinancialPlanBudgetLine[]; flexible_additional_total_minor: string;
+  goals: FinancialPlanGoalLine[]; goals_recommended_total_minor: string;
+  expected_collections: FinancialPlanCollectionLine[]; expected_collections_total_minor: string;
+  base: FinancialPlanScenarioPoint; planned: FinancialPlanScenarioPoint; planned_with_collections: FinancialPlanScenarioPoint;
+};
+export type FinancialPlan = {
+  as_of_date: string; currency: CurrencyCode; horizon_months: number;
+  saldo_inicial: FinancialPlanSaldoInicial; months: FinancialPlanMonth[];
+};
+
+export type RecurringDirection = "income" | "expense";
+export type RecurringStatus = "active" | "paused";
+export type RecurringFrequency =
+  | "weekly" | "biweekly" | "semimonthly" | "monthly" | "bimonthly" | "quarterly" | "semiannual" | "annual";
+
+export type RecurringRule = {
+  id: string; user_id: string; name: string; direction: RecurringDirection; currency: CurrencyCode;
+  start_date: string; end_date: string | null; status: RecurringStatus; archived_at: string | null;
+  subtype: string | null; migrated_from_planned_cash_flow_id: string | null;
+  created_at: string; updated_at: string;
+};
+export type RecurringRuleVersion = {
+  id: string; user_id: string; rule_id: string; effective_from_date: string;
+  amount_minor: string; category_id: string | null; frequency: RecurringFrequency;
+  day_of_month: number | null; day_of_month_secondary: number | null;
+  account_id: string | null; card_id: string | null; created_at: string;
+};
+export type RecurringOccurrenceStatus = "confirmed" | "omitted";
+export type RecurringOccurrenceCandidate = {
+  rule_id: string; name: string; direction: RecurringDirection; currency: CurrencyCode;
+  occurred_on: string; amount_minor: string; category_id: string | null;
+  account_id: string | null; card_id: string | null;
+  existing_occurrence_id: string | null; existing_status: RecurringOccurrenceStatus | null;
+};
+export type RecurringOccurrenceActivity = {
+  id: string; user_id: string; rule_id: string; rule_name: string; currency: CurrencyCode;
+  direction: RecurringDirection; expected_date: string; status: RecurringOccurrenceStatus;
+  expected_amount_minor: string; category_id: string | null; notes: string | null; created_at: string;
+  financial_event_id: string | null; actual_amount_minor: string | null; actual_date: string | null;
+  account_id: string | null; card_id: string | null; is_reversed_without_replacement: boolean;
 };
 
 export type Database = {
@@ -355,6 +479,12 @@ export type Database = {
       receivable_due_items: { Row: Record<string, unknown>; Insert: never; Update: never; Relationships: [] };
       receivable_due_applications: { Row: Record<string, unknown>; Insert: never; Update: never; Relationships: [] };
       person_credit_entries: { Row: Record<string, unknown>; Insert: never; Update: never; Relationships: [] };
+      planned_cash_flows: { Row: PlannedCashFlow; Insert: never; Update: never; Relationships: [] };
+      recurring_rules: { Row: RecurringRule; Insert: never; Update: never; Relationships: [] };
+      recurring_rule_versions: { Row: RecurringRuleVersion; Insert: never; Update: never; Relationships: [] };
+      recurring_rule_pauses: { Row: Record<string, unknown>; Insert: never; Update: never; Relationships: [] };
+      recurring_occurrences: { Row: Record<string, unknown>; Insert: never; Update: never; Relationships: [] };
+      recurring_occurrence_events: { Row: Record<string, unknown>; Insert: never; Update: never; Relationships: [] };
     };
     Views: {
       account_balances: { Row: AccountBalance; Relationships: [] };
@@ -377,6 +507,10 @@ export type Database = {
       person_credit_balances: { Row: { contact_id: string; user_id: string; currency: CurrencyCode; credit_balance_minor: string }; Relationships: [] };
       person_installment_summaries: { Row: PersonInstallmentSummary; Relationships: [] };
       contact_period_overview: { Row: { contact_id: string; user_id: string; periods: PersonCollectionPeriod[] }; Relationships: [] };
+      goal_balances: { Row: GoalBalance; Relationships: [] };
+      goal_entry_activity: { Row: GoalEntryActivity; Relationships: [] };
+      recurring_occurrence_activity: { Row: RecurringOccurrenceActivity; Relationships: [] };
+      recurring_occurrence_current_event: { Row: Record<string, unknown>; Relationships: [] };
     };
     Functions: {
       create_account: {
@@ -487,6 +621,36 @@ export type Database = {
       get_person_collection_period: { Args: { p_contact_id: string; p_as_of_date?: string }; Returns: PersonCollectionProjection };
       get_person_statement: { Args: { p_contact_id: string; p_as_of_date?: string }; Returns: PersonStatement };
       record_person_statement_export: { Args: { p_contact_id: string; p_period_start: string; p_period_end: string; p_format: string; p_idempotency_key: string }; Returns: string };
+      get_budgets_for_period: { Args: { p_month: string; p_currency: string | null }; Returns: BudgetPeriodSummary[] };
+      get_budget_movements: { Args: { p_category_id: string; p_currency: string; p_month: string }; Returns: BudgetMovement[] };
+      create_budget: { Args: { p_category_id: string; p_currency: string; p_limit_minor: string; p_effective_from_month: string | null; p_period_month: string | null; p_idempotency_key: string }; Returns: string };
+      update_recurring_budget_from_month: { Args: { p_category_id: string; p_currency: string; p_limit_minor: string; p_effective_from_month: string; p_idempotency_key: string }; Returns: string };
+      update_budget_exception_limit: { Args: { p_budget_id: string; p_limit_minor: string; p_idempotency_key: string }; Returns: string };
+      stop_recurring_budget: { Args: { p_category_id: string; p_currency: string; p_last_active_month: string; p_idempotency_key: string }; Returns: string };
+      archive_budget: { Args: { p_budget_id: string; p_idempotency_key: string }; Returns: string };
+      restore_budget: { Args: { p_budget_id: string; p_idempotency_key: string }; Returns: string };
+      create_goal: { Args: { p_name: string; p_currency: string; p_target_minor: string; p_target_date: string | null; p_linked_account_id: string | null; p_icon: string | null; p_idempotency_key: string }; Returns: string };
+      update_goal: { Args: { p_goal_id: string; p_name: string; p_target_minor: string; p_target_date: string | null; p_linked_account_id: string | null; p_icon: string | null; p_idempotency_key: string }; Returns: string };
+      set_goal_status: { Args: { p_goal_id: string; p_status: string; p_idempotency_key: string }; Returns: string };
+      archive_goal: { Args: { p_goal_id: string; p_idempotency_key: string }; Returns: string };
+      restore_goal: { Args: { p_goal_id: string; p_idempotency_key: string }; Returns: string };
+      contribute_to_goal: { Args: { p_goal_id: string; p_amount_minor: string; p_source_account_id: string; p_move_real_money: boolean; p_occurred_on: string; p_notes: string | null; p_idempotency_key: string }; Returns: string };
+      withdraw_from_goal: { Args: { p_goal_id: string; p_amount_minor: string; p_account_id: string | null; p_move_real_money: boolean; p_destination_account_id: string | null; p_occurred_on: string; p_notes: string | null; p_idempotency_key: string }; Returns: string };
+      reverse_goal_entry: { Args: { p_entry_id: string; p_idempotency_key: string }; Returns: string };
+      create_planned_cash_flow: { Args: { p_name: string; p_currency: string; p_amount_minor: string; p_category_id: string | null; p_recurrence: string; p_start_date: string; p_end_date: string | null; p_idempotency_key: string }; Returns: string };
+      update_planned_cash_flow: { Args: { p_flow_id: string; p_name: string; p_amount_minor: string; p_category_id: string | null; p_recurrence: string; p_start_date: string; p_end_date: string | null; p_idempotency_key: string }; Returns: string };
+      archive_planned_cash_flow: { Args: { p_flow_id: string; p_idempotency_key: string }; Returns: string };
+      restore_planned_cash_flow: { Args: { p_flow_id: string; p_idempotency_key: string }; Returns: string };
+      get_financial_plan: { Args: { p_currency: string; p_as_of_date?: string; p_horizon_months?: number }; Returns: FinancialPlan };
+      create_recurring_rule: { Args: { p_name: string; p_direction: string; p_currency: string; p_amount_minor: string; p_category_id: string | null; p_frequency: string; p_day_of_month: number | null; p_day_of_month_secondary: number | null; p_account_id: string | null; p_card_id: string | null; p_start_date: string; p_end_date: string | null; p_subtype: string | null; p_idempotency_key: string }; Returns: string };
+      update_recurring_rule: { Args: { p_rule_id: string; p_name: string; p_end_date: string | null; p_effective_from_date: string | null; p_amount_minor: string; p_category_id: string | null; p_frequency: string; p_day_of_month: number | null; p_day_of_month_secondary: number | null; p_account_id: string | null; p_card_id: string | null; p_idempotency_key: string }; Returns: string };
+      pause_recurring_rule: { Args: { p_rule_id: string; p_idempotency_key: string }; Returns: string };
+      resume_recurring_rule: { Args: { p_rule_id: string; p_idempotency_key: string }; Returns: string };
+      archive_recurring_rule: { Args: { p_rule_id: string; p_idempotency_key: string }; Returns: string };
+      restore_recurring_rule: { Args: { p_rule_id: string; p_idempotency_key: string }; Returns: string };
+      confirm_recurring_occurrence: { Args: { p_rule_id: string; p_expected_date: string; p_actual_amount_minor: string; p_actual_date: string; p_source_account_id: string | null; p_source_card_id: string | null; p_notes: string | null; p_idempotency_key: string }; Returns: string };
+      omit_recurring_occurrence: { Args: { p_rule_id: string; p_expected_date: string; p_notes: string | null; p_idempotency_key: string }; Returns: string };
+      get_recurring_occurrences: { Args: { p_from_date: string; p_to_date: string }; Returns: RecurringOccurrenceCandidate[] };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

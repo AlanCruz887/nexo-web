@@ -9,11 +9,11 @@ const document: StatementDocument = {
   blocks: [
     {
       currency: "MXN", periodLabel: "9 ago — 29 sep", periodStart: "2026-08-09", paymentDueDate: "2026-09-29",
-      toPayThisPeriodMinor: "176667", paidThisPeriodMinor: "30000", missingMinor: "146667",
+      periodTotalMinor: "176667", coveredMinor: "30000", remainingMinor: "146667", reconciledMinor: "0",
       overdueMinor: "0", overdueSince: null, totalOwedMinor: "770000", creditBalanceMinor: "0",
       concepts: [
-        { id: "c1", description: "MacBook Pro", typeLabel: "Mensualidad 5 de 12", amountMinor: "66667", purchaseAmountMinor: "1200000", outstandingMinor: "66667" },
-        { id: "c2", description: "Cena", typeLabel: "Compra compartida", amountMinor: "40000", purchaseAmountMinor: "100000", outstandingMinor: "0" },
+        { id: "c1", description: "MacBook Pro", typeLabel: "Mensualidad 5 de 12", amountMinor: "66667", coveredMinor: "0", purchaseAmountMinor: "1200000", outstandingMinor: "66667" },
+        { id: "c2", description: "Cena", typeLabel: "Compra compartida", amountMinor: "40000", coveredMinor: "40000", purchaseAmountMinor: "100000", outstandingMinor: "0" },
       ],
       payments: [
         { event_id: "p1", occurred_on: "2026-08-18", currency: "MXN", account_name: "BBVA", amount_minor: "30000", applied_to_period_minor: "30000", applied_to_future_minor: "0", credit_generated_minor: "0" },
@@ -47,6 +47,18 @@ describe("buildConceptosRows", () => {
     const cena = rows.find((row) => row[1]?.type === "text" && row[1].value === "Cena")!;
     expect(cena[2]).toEqual({ type: "text", value: "Compra" });
     expect(cena[3]).toEqual({ type: "text", value: "—" });
+  });
+
+  it("keeps Correspondía, Pagado and Pendiente as three separate, reconciling columns", () => {
+    const { rows } = buildConceptosRows(document);
+    const macbook = rows.find((row) => row[1]?.type === "text" && row[1].value === "MacBook Pro")!;
+    expect(macbook[4]).toEqual({ type: "number", value: 666.67, money: true }); // Correspondía
+    expect(macbook[5]).toEqual({ type: "number", value: 0, money: true }); // Pagado
+    expect(macbook[6]).toEqual({ type: "number", value: 666.67, money: true }); // Pendiente
+    const cena = rows.find((row) => row[1]?.type === "text" && row[1].value === "Cena")!;
+    expect(cena[4]).toEqual({ type: "number", value: 400, money: true });
+    expect(cena[5]).toEqual({ type: "number", value: 400, money: true });
+    expect(cena[6]).toEqual({ type: "number", value: 0, money: true });
   });
 });
 

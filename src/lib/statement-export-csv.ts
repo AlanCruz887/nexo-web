@@ -2,7 +2,7 @@ import { formatFinancialDate } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import type { StatementDocument } from "@/lib/person-statement";
 
-const HEADERS = ["Fecha", "Concepto", "Tipo", "Mensualidad", "Importe del periodo", "Pendiente total", "Estado", "Moneda"];
+const HEADERS = ["Fecha", "Concepto", "Tipo", "Mensualidad", "Correspondía", "Pagado", "Pendiente", "Estado", "Moneda"];
 
 function escapeCsvField(value: string): string {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
@@ -24,6 +24,7 @@ export function buildStatementCsv(document: StatementDocument): string {
         isInstallment ? "MSI" : "Compra",
         isInstallment ? concept.typeLabel.replace("Mensualidad ", "") : "—",
         formatMoney(concept.amountMinor, block.currency),
+        formatMoney(concept.coveredMinor, block.currency),
         formatMoney(concept.outstandingMinor, block.currency),
         concept.outstandingMinor === "0" ? "Pagado" : "Pendiente",
         block.currency,

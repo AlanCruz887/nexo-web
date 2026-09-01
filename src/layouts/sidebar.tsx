@@ -1,4 +1,4 @@
-import { CreditCard, Home, Landmark, ReceiptText, Settings, Users } from "lucide-react";
+import { CalendarClock, CreditCard, Home, Landmark, Repeat, ReceiptText, Settings, Target, Users, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { NavLink } from "react-router-dom";
 
@@ -11,6 +11,10 @@ export const primaryNavigation = [
   { href: "/cuentas", label: "Cuentas", icon: Landmark },
   { href: "/tarjetas", label: "Tarjetas", icon: CreditCard },
   { href: "/personas", label: "Personas", icon: Users },
+  { href: "/presupuestos", label: "Presupuestos", icon: Wallet },
+  { href: "/metas", label: "Metas", icon: Target },
+  { href: "/recurrentes", label: "Recurrentes", icon: Repeat },
+  { href: "/planeacion", label: "Planeación", icon: CalendarClock },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ] as const;
 

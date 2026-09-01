@@ -39,14 +39,14 @@ export function buildSheetXml(headers: string[], rows: CellValue[][]): string {
 }
 
 export function buildResumenRows(document: StatementDocument): { headers: string[]; rows: CellValue[][] } {
-  const headers = ["Persona", "Periodo", "Fecha límite", "A pagar", "Pagado", "Falta", "Vencido", "Deuda total", "Saldo a favor", "Moneda"];
+  const headers = ["Persona", "Periodo", "Fecha límite", "Total del periodo", "Cubierto", "Pendiente este periodo", "Vencido", "Te debe en total", "Saldo a favor", "Moneda"];
   const rows = document.blocks.map((block) => [
     textCell(document.personName),
     textCell(block.periodLabel),
     textCell(block.paymentDueDate ? formatFinancialDate(block.paymentDueDate) : "—"),
-    moneyCell(minorToNumber(block.toPayThisPeriodMinor)),
-    moneyCell(minorToNumber(block.paidThisPeriodMinor)),
-    moneyCell(minorToNumber(block.missingMinor)),
+    moneyCell(minorToNumber(block.periodTotalMinor)),
+    moneyCell(minorToNumber(block.coveredMinor)),
+    moneyCell(minorToNumber(block.remainingMinor)),
     moneyCell(minorToNumber(block.overdueMinor)),
     moneyCell(minorToNumber(block.totalOwedMinor)),
     moneyCell(minorToNumber(block.creditBalanceMinor)),
@@ -56,13 +56,14 @@ export function buildResumenRows(document: StatementDocument): { headers: string
 }
 
 export function buildConceptosRows(document: StatementDocument): { headers: string[]; rows: CellValue[][] } {
-  const headers = ["Fecha", "Concepto", "Tipo", "Mensualidad", "Importe del periodo", "Pendiente total", "Moneda"];
+  const headers = ["Fecha", "Concepto", "Tipo", "Mensualidad", "Correspondía", "Pagado", "Pendiente", "Moneda"];
   const rows = document.blocks.flatMap((block) => block.concepts.map((concept) => [
     textCell(formatFinancialDate(block.paymentDueDate ?? document.asOfDate)),
     textCell(concept.description),
     textCell(concept.typeLabel.startsWith("Mensualidad") ? "MSI" : "Compra"),
     textCell(concept.typeLabel.startsWith("Mensualidad") ? concept.typeLabel.replace("Mensualidad ", "") : "—"),
     moneyCell(minorToNumber(concept.amountMinor)),
+    moneyCell(minorToNumber(concept.coveredMinor)),
     moneyCell(minorToNumber(concept.outstandingMinor)),
     textCell(block.currency),
   ]));

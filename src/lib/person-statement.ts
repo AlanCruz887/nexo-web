@@ -10,8 +10,12 @@ export type StatementConcept = {
   id: string;
   description: string;
   typeLabel: string;
+  /** Correspondía: lo que originalmente correspondía a este concepto en el periodo. */
   amountMinor: string;
+  /** Pagado: lo que ya se cubrió de este concepto (amountMinor = coveredMinor + outstandingMinor). */
+  coveredMinor: string;
   purchaseAmountMinor: string;
+  /** Pendiente: lo que todavía falta de este concepto. */
   outstandingMinor: string;
 };
 
@@ -22,11 +26,17 @@ export type StatementBlock = {
   periodLabel: string;
   periodStart: string | null;
   paymentDueDate: string | null;
-  toPayThisPeriodMinor: string;
-  paidThisPeriodMinor: string;
-  missingMinor: string;
+  /** Total del periodo: lo que originalmente correspondía pagar este periodo (fijo, no baja al pagar). */
+  periodTotalMinor: string;
+  /** Cubierto: lo ya aplicado a este periodo (pagos reales + reconciliación histórica). */
+  coveredMinor: string;
+  /** Pendiente este periodo: periodTotalMinor = coveredMinor + remainingMinor. La cifra accionable. */
+  remainingMinor: string;
+  /** Cuánto de coveredMinor viene de reconciliar cronograma histórico, no de un pago nuevo. */
+  reconciledMinor: string;
   overdueMinor: string;
   overdueSince: string | null;
+  /** Te debe en total: deuda real total (incluye periodos futuros), distinta de periodTotalMinor. */
   totalOwedMinor: string;
   creditBalanceMinor: string;
   concepts: StatementConcept[];
@@ -58,9 +68,10 @@ export function buildStatementDocument(personName: string, statement: PersonStat
     periodLabel: periodLabel(period.period_start, period.payment_due_date),
     periodStart: period.period_start,
     paymentDueDate: period.payment_due_date,
-    toPayThisPeriodMinor: period.subtotal_minor,
-    paidThisPeriodMinor: period.paid_minor,
-    missingMinor: period.remaining_minor,
+    periodTotalMinor: period.subtotal_minor,
+    coveredMinor: period.paid_minor,
+    remainingMinor: period.remaining_minor,
+    reconciledMinor: period.reconciled_minor,
     overdueMinor: period.overdue_minor,
     overdueSince: period.overdue_since,
     totalOwedMinor: period.total_outstanding_minor,
@@ -70,6 +81,7 @@ export function buildStatementDocument(personName: string, statement: PersonStat
       description: concept.description,
       typeLabel: conceptTypeLabel(concept),
       amountMinor: concept.amount_minor,
+      coveredMinor: concept.paid_minor,
       purchaseAmountMinor: concept.purchase_amount_minor,
       outstandingMinor: concept.outstanding_minor,
     })),

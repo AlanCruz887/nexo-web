@@ -48,6 +48,18 @@ SQL
 for migration in supabase/migrations/*.sql; do
   echo "Applying ${migration}"
   psql -v ON_ERROR_STOP=1 -h "${nexo_pg_socket}" -p "${nexo_pg_port}" -U postgres -d "${nexo_pg_database}" -f "${migration}" >/dev/null
+
+  # Checkpoint: planned_cash_flows.recurrence still accepts 'monthly' right
+  # after this migration (it created recurring_rules and migrated existing
+  # 'monthly' rows, but has not yet tightened the CHECK constraint -- that
+  # happens in the next migration). Run the one test that genuinely needs a
+  # raw 'monthly' row to exist in the table here, before the constraint
+  # that would make such a row impossible to insert ever applies.
+  if [[ "$(basename "${migration}")" == "20260830080000_phase_7a_recurring_transactions.sql" ]]; then
+    echo "Running checkpoint supabase/tests/_checkpoints/planned_cash_flows_prelock.test.sql"
+    psql -v ON_ERROR_STOP=1 -h "${nexo_pg_socket}" -p "${nexo_pg_port}" -U postgres -d "${nexo_pg_database}" \
+      -f supabase/tests/_checkpoints/planned_cash_flows_prelock.test.sql
+  fi
 done
 
 for test_file in supabase/tests/*.test.sql; do
