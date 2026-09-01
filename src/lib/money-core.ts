@@ -5,6 +5,20 @@
  * second implementation of the same money rule.
  */
 
+/**
+ * Minor-unit scale per currency. Duplicated intentionally (not
+ * re-exported from src/types/money.ts, which stays unchanged for its 33
+ * existing frontend importers): this is a 3-row data table, not parsing
+ * logic, so the "single implementation" requirement is about
+ * parseMoneyInput/minorToDisplay -- the functions below -- not this
+ * lookup. Keep both copies in sync if a currency is ever added.
+ */
+export const currencyMinorUnits: Readonly<Record<string, number>> = {
+  MXN: 2,
+  USD: 2,
+  EUR: 2,
+};
+
 /** Exact domain representation while money is inside TypeScript. */
 export type MoneyMinor = bigint;
 

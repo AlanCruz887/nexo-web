@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:db": "bash scripts/test-db.sh"
+    "test:db": "bash scripts/test-db.sh",
+    "test:shortcut-concurrency": "bash scripts/test-shortcut-concurrency.sh",
+    "test:shortcut-http-local": "bash scripts/test-shortcut-http-local.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "5.9.1",
