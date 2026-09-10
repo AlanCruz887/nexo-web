@@ -39,12 +39,12 @@ export function AppShell() {
   async function handleSignOut() { try { await signOut(); } catch (error) { reportError("sign-out", error); } }
   const identity = user?.email ?? "Tu perfil";
 
-  return <div className="min-h-screen lg:grid lg:grid-cols-[232px_1fr]">
+  return <div className="min-h-screen safe-area-top lg:grid lg:grid-cols-[232px_1fr]">
     <Sidebar />
     <div className="min-w-0 lg:col-start-2">
       <Topbar identity={identity} onMenu={() => setMobileMenuOpen((value) => !value)} onQuickAction={openAction} onSearch={() => setCommandOpen(true)} />
       {mobileMenuOpen ? <nav aria-label="Menú móvil" className="border-b border-border bg-surface px-4 py-3 shadow-card lg:hidden">{primaryNavigation.map(({ href, icon: Icon, label }) => <NavLink key={href} className={({ isActive }) => cn("flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground", isActive && "bg-primary-soft text-primary-strong")} onClick={() => setMobileMenuOpen(false)} to={href}><Icon className="size-5" />{label}</NavLink>)}<button className="mt-2 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-muted-foreground" onClick={() => void handleSignOut()} type="button"><LogOut className="size-5" />Cerrar sesión</button></nav> : null}
-      <main className="mx-auto w-full max-w-[1180px] px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:py-12 lg:pb-12"><Outlet /></main>
+      <main className="safe-area-inline mx-auto w-full max-w-[1180px] px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:py-12 lg:pb-12"><Outlet /></main>
     </div>
 
     <nav aria-label="Navegación inferior" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-border/70 bg-surface/95 px-1 pb-[max(.4rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl lg:hidden print:hidden">

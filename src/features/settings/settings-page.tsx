@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ShortcutTokensSection } from "@/features/settings/shortcut-tokens-section";
+import { PwaInstallSection } from "@/features/settings/pwa-install-section";
 import { useCurrencies } from "@/hooks/use-currencies";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { getBrowserTimezone } from "@/lib/dates";
@@ -95,6 +96,8 @@ export function SettingsPage() {
               </div>
             </div>
           </section>
+
+          <PwaInstallSection />
 
           <ShortcutTokensSection />
 

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nexo">
+  <rect width="512" height="512" fill="#0f2454"/>
+  <circle cx="382" cy="130" r="82" fill="#2563eb" opacity=".75"/>
+  <path d="M151 342V170c0-17 13-30 30-30 10 0 19 5 25 13l100 130V170c0-17 13-30 30-30s30 13 30 30v172c0 17-13 30-30 30-10 0-19-5-25-13L211 229v113c0 17-13 30-30 30s-30-13-30-30Z" fill="#fff"/>
+</svg>
