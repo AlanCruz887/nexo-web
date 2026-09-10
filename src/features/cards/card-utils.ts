@@ -8,6 +8,71 @@ export const cardThemes: Record<CardTheme, { label: string; className: string; a
   generic: { label: "Genérica", className: "from-[#152b55] via-[#23477d] to-[#4772a9] text-white", accent: "bg-sky-200/90" },
 };
 
+export type CardProductTheme = {
+  brand: string;
+  product: string;
+  surfaceClass: string;
+  primaryTextClass: string;
+  secondaryTextClass: string;
+  trackClass: string;
+  progressClass: string;
+  borderClass: string;
+};
+
+/** Visual identity used by the physical-card treatment in “Tus tarjetas”. */
+export const cardProductThemes: Record<CardTheme, CardProductTheme> = {
+  bbva_oro: {
+    brand: "BBVA",
+    product: "ORO",
+    surfaceClass: "bg-[#bfa76f]",
+    primaryTextClass: "text-[#101827]",
+    secondaryTextClass: "text-[#243044]/65",
+    trackClass: "bg-[#182235]/12",
+    progressClass: "bg-[#182235]/75",
+    borderClass: "border-[#fff8dc]/32",
+  },
+  banamex_clasica: {
+    brand: "Banamex",
+    product: "CLÁSICA",
+    surfaceClass: "bg-[#d7193f]",
+    primaryTextClass: "text-white",
+    secondaryTextClass: "text-white/68",
+    trackClass: "bg-white/18",
+    progressClass: "bg-white/88",
+    borderClass: "border-white/18",
+  },
+  banamex_joy: {
+    brand: "Banamex",
+    product: "JOY",
+    surfaceClass: "bg-[#00a7cf]",
+    primaryTextClass: "text-white",
+    secondaryTextClass: "text-white/72",
+    trackClass: "bg-[#003f69]/22",
+    progressClass: "bg-white/90",
+    borderClass: "border-white/22",
+  },
+  nu: {
+    brand: "nu",
+    product: "CRÉDITO",
+    surfaceClass: "bg-[#6f238e]",
+    primaryTextClass: "text-white",
+    secondaryTextClass: "text-white/68",
+    trackClass: "bg-white/16",
+    progressClass: "bg-white/88",
+    borderClass: "border-white/16",
+  },
+  generic: {
+    brand: "NEXO",
+    product: "CRÉDITO",
+    surfaceClass: "bg-[#17386f]",
+    primaryTextClass: "text-white",
+    secondaryTextClass: "text-white/66",
+    trackClass: "bg-white/15",
+    progressClass: "bg-white/85",
+    borderClass: "border-white/14",
+  },
+};
+
 export function cardUtilization(used: string | bigint, limit: string | bigint): number {
   const usedMinor = typeof used === "bigint" ? used : BigInt(used);
   const limitMinor = typeof limit === "bigint" ? limit : BigInt(limit);
